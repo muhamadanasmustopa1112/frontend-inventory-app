@@ -1,0 +1,121 @@
+// app/api/reports/stock-balance/route.ts
+import { NextRequest, NextResponse } from "next/server"
+import { cookies } from "next/headers"
+
+const API_URL = process.env.NEXT_PUBLIC_API_BASE_URL
+
+type BackendUser = {
+  id: number
+  name: string
+  warehouse_id: number | null
+}
+
+async function getCurrentUser(token: string): Promise<BackendUser | null> {
+  if (!API_URL) return null
+
+  const res = await fetch(`${API_URL}/me`, {
+    method: "GET",
+    headers: {
+      Accept: "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+    cache: "no-store",
+  })
+
+  if (!res.ok) {
+    console.error("Failed to fetch /me:", res.status)
+    return null
+  }
+
+  const data = await res.json().catch(() => null)
+  const user = (data?.data as BackendUser) ?? (data as BackendUser)
+  return user ?? null
+}
+
+export async function GET(req: NextRequest) {
+  try {
+    if (!API_URL) {
+      return NextResponse.json(
+        { message: "Backend API config is missing" },
+        { status: 500 }
+      )
+    }
+
+    const cookieStore = cookies()
+    const token = (await cookieStore).get("token")?.value
+
+    if (!token) {
+      return NextResponse.json(
+        { message: "Unauthorized: missing token" },
+        { status: 401 }
+      )
+    }
+
+    const user = await getCurrentUser(token)
+    if (!user) {
+      return NextResponse.json(
+        { message: "Failed to get current user" },
+        { status: 500 }
+      )
+    }
+
+    const { searchParams } = new URL(req.url)
+
+    const requestedWarehouseId = searchParams.get("warehouse_id")
+    const productId = searchParams.get("product_id")
+    const category = searchParams.get("category")
+    const search = searchParams.get("search")
+    const perPage = searchParams.get("per_page")
+
+    const qs = new URLSearchParams()
+
+    if (productId) qs.set("product_id", productId)
+    if (category) qs.set("category", category)
+    if (search) qs.set("search", search)
+    if (perPage) qs.set("per_page", perPage)
+
+    if (user.warehouse_id !== null) {
+      qs.set("warehouse_id", String(user.warehouse_id))
+    } else {
+      if (requestedWarehouseId) {
+        qs.set("warehouse_id", requestedWarehouseId)
+      }
+    }
+
+    const backendUrl = `${API_URL}/reports/stock-balance${
+      qs.toString() ? `?${qs.toString()}` : ""
+    }`
+
+    const res = await fetch(backendUrl, {
+      method: "GET",
+      headers: {
+        Accept: "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      cache: "no-store",
+    })
+
+    const data = await res.json().catch(() => null)
+
+    if (!res.ok) {
+      return NextResponse.json(
+        {
+          message: data?.message || "Failed to fetch stock-balance report",
+          errors: data?.errors,
+        },
+        { status: res.status }
+      )
+    }
+
+    return NextResponse.json(data, { status: 200 })
+  } catch (error: any) {
+    console.error("Error fetching stock-balance report:", error)
+    return NextResponse.json(
+      {
+        message: "Unexpected error when fetching stock-balance report",
+        error: error?.message ?? String(error),
+      },
+      { status: 500 }
+    )
+  }
+}
