@@ -31,7 +31,7 @@ export function LoginForm({
   const searchParams = useSearchParams();
 
   const redirectUrl = searchParams.get("redirect") || "/dashboard";
-  const setUser = useAuthStore((state) => state.setUser)
+  const setUser = useAuthStore((state: { setUser: any }) => state.setUser)
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
