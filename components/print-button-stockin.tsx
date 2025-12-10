@@ -59,7 +59,7 @@ export function PrintButtonStockIn({
       // ================= JUDUL =================
       doc.setFont("helvetica", "bold")
       doc.setFontSize(16)
-      doc.text("Surat Jalan Masuk", marginLeft, 40)
+      doc.text("Keterangan Barang Masuk", marginLeft, 40)
 
       // ================= INFORMASI =================
       const dt = item.date_in ? new Date(item.date_in) : new Date()
@@ -73,7 +73,7 @@ export function PrintButtonStockIn({
 
       const info = [
         ["Gudang", item.warehouse?.name ?? "-"],
-        ["Surat Jalan", item.reference ?? "-"],
+        ["Invoice", item.reference ?? "-"],
         [
           "Tanggal",
           `${dt.toLocaleDateString("id-ID")}`,

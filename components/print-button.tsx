@@ -57,10 +57,34 @@ export function PrintButton({
       const logoY = 20
       doc.addImage(img, "PNG", logoX, logoY, logoWidth, logoHeight)
 
+      // ================= INFORMASI KENDARAAN =================
+      const vehicleMarginRight = 40; 
+      let vehicleY = logoY + logoHeight + 25; 
+
+      const vehicleInfo = [
+        ["No Pol", ".".repeat(25)],
+        ["No Supir", ".".repeat(25)],
+        ["Nama Supir", ".".repeat(25)],
+      ];
+
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(10);
+
+      const labelXS = pageWidth - vehicleMarginRight - 120; 
+      const colonXS = labelXS + 60; 
+      const valueXS = colonXS + 5;  
+
+      vehicleInfo.forEach(([label, value]) => {
+        doc.text(label, labelXS, vehicleY);
+        doc.text(':', colonXS, vehicleY);
+        doc.text(value, valueXS, vehicleY);
+        vehicleY += 15;
+      });
+
       // ================= JUDUL =================
       doc.setFont("helvetica", "bold")
       doc.setFontSize(16)
-      doc.text("Surat Jalan Keluar", marginLeft, 40)
+      doc.text("Surat Jalan", marginLeft, 40)
 
       // ================= INFORMASI =================
       const dt = item.date_out ? new Date(item.date_out) : new Date()
@@ -75,7 +99,7 @@ export function PrintButton({
       const info = [
         ["Gudang", item.warehouse?.name ?? "-"],
         ["Buyer", item.buyer?.name ?? "-"],
-        ["Surat Jalan", item.reference ?? "-"],
+        ["No SJ", item.reference ?? "-"],
         [
           "Tanggal",
           `${dt.toLocaleDateString("id-ID")}`,
