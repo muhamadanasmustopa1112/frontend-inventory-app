@@ -1,4 +1,3 @@
-// app/reports/_components/sales-report-section.tsx
 "use client"
 
 import * as React from "react"
@@ -7,16 +6,8 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import {
-  Table,
-  TableHeader,
-  TableRow,
-  TableHead,
-  TableBody,
-  TableCell,
-} from "@/components/ui/table"
-import {
-  SalesRow,
-  SalesSummary,
+  StockOutRow,
+  StockOutSummary,
   PaginationMeta,
   parseApiListResponse,
 } from "./report-types"
@@ -28,6 +19,16 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
+
+import {
+  ResponsiveContainer,
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  Tooltip,
+  CartesianGrid,
+} from "recharts"
 
 function formatDate(value: string) {
   if (!value) return "-"
@@ -43,7 +44,7 @@ function formatNumber(value: string | number | null | undefined) {
   return num.toLocaleString("id-ID")
 }
 
-export function SalesReportSection() {
+export default function StockOutReportSection() {
   const user = useAuthStore((state) => state.user)
   const isWarehouseScoped = !!user?.warehouse_id
   const isAdmin = !isWarehouseScoped 
@@ -51,16 +52,15 @@ export function SalesReportSection() {
   const [dateFrom, setDateFrom] = React.useState("")
   const [dateTo, setDateTo] = React.useState("")
   const [warehouseId, setWarehouseId] = React.useState("")
-  const [buyerId, setBuyerId] = React.useState("")
   const [perPage, setPerPage] = React.useState("20")
 
   const [page, setPage] = React.useState(1)
 
   const [loading, setLoading] = React.useState(false)
   const [error, setError] = React.useState<string | null>(null)
-  const [rows, setRows] = React.useState<SalesRow[]>([])
+  const [rows, setRows] = React.useState<StockOutRow[]>([])
   const [meta, setMeta] = React.useState<PaginationMeta | null>(null)
-  const [summary, setSummary] = React.useState<SalesSummary | null>(null)
+  const [summary, setSummary] = React.useState<StockOutSummary | null>(null)
 
   const [warehouses, setWarehouses] = React.useState<any[]>([])
   const [loadingWarehouses, setLoadingWarehouses] = React.useState(false)
@@ -78,7 +78,7 @@ export function SalesReportSection() {
     }
   }
 
-  async function fetchSales(targetPage?: number) {
+  async function fetchStockOut(targetPage?: number) {
     try {
       setLoading(true)
       setError(null)
@@ -89,17 +89,16 @@ export function SalesReportSection() {
       if (dateFrom) qs.set("date_from", dateFrom)
       if (dateTo) qs.set("date_to", dateTo)
       if (warehouseId && isAdmin) qs.set("warehouse_id", warehouseId)
-      if (buyerId) qs.set("buyer_id", buyerId)
       if (perPage) qs.set("per_page", perPage)
       qs.set("page", String(pageToLoad))
 
-      const url = `/api/reports/sales?${qs.toString()}`
+      const url = `/api/reports/stock-out?${qs.toString()}`
 
       const res = await fetch(url, { cache: "no-store" })
-      const parsed = await parseApiListResponse<SalesRow, SalesSummary>(res)
+      const parsed = await parseApiListResponse<StockOutRow, StockOutSummary>(res)
 
       if (!parsed.ok) {
-        setError(parsed.message ?? "Gagal mengambil data sales")
+        setError(parsed.message ?? "Gagal mengambil data stock out")
         setRows([])
         setMeta(null)
         setSummary(null)
@@ -126,73 +125,87 @@ export function SalesReportSection() {
   }, [isAdmin])
 
   React.useEffect(() => {
-    fetchSales(1)
+    fetchStockOut(1)
   }, [])
 
   function handleApplyFilters() {
-    fetchSales(1)
+    fetchStockOut(1)
   }
+
+  const chartData = React.useMemo(() => {
+    if (!rows || rows.length === 0) return []
+
+    const map = new Map<string, number>()
+
+    for (const r of rows) {
+      const key = formatDate(r.date_out)
+      const totalQty = r.items?.reduce((s, it) => s + (it.qty ?? 0), 0) ?? 0
+      map.set(key, (map.get(key) ?? 0) + totalQty)
+    }
+
+    const arr = Array.from(map.entries()).map(([label, value]) => ({ label, value }))
+
+    arr.sort((a, b) => {
+      const da = new Date(a.label)
+      const db = new Date(b.label)
+      return da.getTime() - db.getTime()
+    })
+
+    return arr
+  }, [rows])
 
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Laporan Sales (Stock Out)</CardTitle>
+        <CardTitle>Laporan Stock Out (Chart)</CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
         {summary && (
           <div className="rounded-md border bg-muted/40 p-3 text-sm flex flex-wrap gap-4">
-            {/* <div>
-              <span className="text-muted-foreground">Total Revenue:</span>{" "}
-              <span className="font-semibold">
-                Rp {formatNumber(summary.total_revenue)}
-              </span>
-            </div> */}
             <div>
-              <span className="text-muted-foreground">Periode:</span>{" "}
-              <span>
-                {summary.date_from || summary.date_to
-                  ? `${summary.date_from ?? "?"} s/d ${summary.date_to ?? "?"}`
-                  : "Semua tanggal"}
+              <span className="text-muted-foreground">Total transaksi:</span>{" "}
+              <span className="font-semibold">{summary.total_transactions}</span>
+            </div>
+            <div>
+              <span className="text-muted-foreground">Total unit (page):</span>{" "}
+              <span className="font-semibold">
+                {formatNumber(summary.total_units_in_page)}
               </span>
             </div>
           </div>
         )}
 
-        {/* Filter */}
-        <div className="grid gap-4 md:grid-cols-5">
+        <div className="grid gap-4 md:grid-cols-4">
           <div className="space-y-1">
-            <Label htmlFor="sales-date-from">Tanggal dari</Label>
+            <Label htmlFor="si-date-from">Tanggal dari</Label>
             <Input
-              id="sales-date-from"
+              id="si-date-from"
               type="date"
               value={dateFrom}
               onChange={(e) => setDateFrom(e.target.value)}
             />
           </div>
           <div className="space-y-1">
-            <Label htmlFor="sales-date-to">Tanggal sampai</Label>
+            <Label htmlFor="si-date-to">Tanggal sampai</Label>
             <Input
-              id="sales-date-to"
+              id="si-date-to"
               type="date"
               value={dateTo}
               onChange={(e) => setDateTo(e.target.value)}
             />
           </div>
 
-   
           {isAdmin && (
             <div className="space-y-1">
-              <Label htmlFor="sales-warehouse-id">Gudang</Label>
+              <Label htmlFor="si-warehouse-id">Gudang</Label>
               <Select
                 value={warehouseId}
                 onValueChange={(val) => setWarehouseId(val)}
               >
-                <SelectTrigger id="sales-warehouse-id">
+                <SelectTrigger id="si-warehouse-id">
                   <SelectValue
                     placeholder={
-                      loadingWarehouses
-                        ? "Memuat gudang..."
-                        : "Semua gudang"
+                      loadingWarehouses ? "Memuat gudang..." : "Semua gudang"
                     }
                   />
                 </SelectTrigger>
@@ -208,18 +221,9 @@ export function SalesReportSection() {
           )}
 
           <div className="space-y-1">
-            <Label htmlFor="sales-buyer-id">Buyer ID</Label>
+            <Label htmlFor="si-per-page">Per page</Label>
             <Input
-              id="sales-buyer-id"
-              placeholder="opsional"
-              value={buyerId}
-              onChange={(e) => setBuyerId(e.target.value)}
-            />
-          </div>
-          <div className="space-y-1">
-            <Label htmlFor="sales-per-page">Per page</Label>
-            <Input
-              id="sales-per-page"
+              id="si-per-page"
               type="number"
               min={1}
               value={perPage}
@@ -235,57 +239,36 @@ export function SalesReportSection() {
           {error && <p className="text-sm text-destructive">{error}</p>}
         </div>
 
-        {/* Tabel */}
-        <div className="border rounded-md overflow-x-auto">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Tanggal</TableHead>
-                <TableHead>Warehouse</TableHead>
-                <TableHead>Buyer</TableHead>
-                <TableHead>Catatan</TableHead>
-                {/* <TableHead className="text-right">Total Price</TableHead> */}
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {rows.length === 0 && !loading && (
-                <TableRow>
-                  <TableCell
-                    colSpan={5}
-                    className="text-center text-sm text-muted-foreground"
-                  >
-                    Tidak ada data
-                  </TableCell>
-                </TableRow>
-              )}
-
-              {rows.map((row) => (
-                <TableRow key={row.id}>
-                  <TableCell>{formatDate(row.date_out)}</TableCell>
-                  <TableCell>{row.warehouse?.name ?? "-"}</TableCell>
-                  <TableCell>{row.buyer?.name ?? "-"}</TableCell>
-                  <TableCell>{row.note ?? "-"}</TableCell>
-                  {/* <TableCell className="text-right">
-                    Rp {formatNumber(row.total_price)}
-                  </TableCell> */}
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+        {/* Chart area */}
+        <div className="border rounded-md p-4 h-80">
+          {chartData.length === 0 ? (
+            <div className="h-full flex items-center justify-center text-sm text-muted-foreground">
+              Tidak ada data untuk ditampilkan di chart
+            </div>
+          ) : (
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={chartData} margin={{ top: 10, right: 20, left: 0, bottom: 20 }}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="label" angle={-45} textAnchor="end" height={60} />
+                <YAxis />
+                <Tooltip formatter={(val: any) => formatNumber(val)} />
+                <Bar dataKey="value" name="Total Unit" />
+              </BarChart>
+            </ResponsiveContainer>
+          )}
         </div>
 
         {meta && meta.last_page > 1 && (
           <div className="flex items-center justify-between pt-3">
             <p className="text-xs text-muted-foreground">
-              Halaman {meta.current_page} dari {meta.last_page} • Total{" "}
-              {meta.total} transaksi
+              Halaman {meta.current_page} dari {meta.last_page} • Total {meta.total} transaksi
             </p>
             <div className="flex gap-2">
               <Button
                 variant="outline"
                 size="sm"
                 disabled={page <= 1 || loading}
-                onClick={() => fetchSales(page - 1)}
+                onClick={() => fetchStockOut(page - 1)}
               >
                 Sebelumnya
               </Button>
@@ -293,7 +276,7 @@ export function SalesReportSection() {
                 variant="outline"
                 size="sm"
                 disabled={page >= meta.last_page || loading}
-                onClick={() => fetchSales(page + 1)}
+                onClick={() => fetchStockOut(page + 1)}
               >
                 Berikutnya
               </Button>

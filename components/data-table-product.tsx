@@ -91,8 +91,8 @@ export const productSchema = z.object({
   id: z.number(),
   name: z.string(),
   sku: z.string(),
-  category: z.string(),
-  default_sell_price: z.string(),
+  category: z.string().nullable().optional(),
+  default_sell_price: z.string().nullable().optional(),
   description: z.string().nullable().optional(),
   is_active: z.number(),
   created_at: z.string(),
@@ -129,11 +129,13 @@ function DragHandle({ attributes, listeners }: DragHandleProps) {
 
 function TableCellViewer({ item }: { item: Product }) {
   const isMobile = useIsMobile()
-  const price = new Intl.NumberFormat("id-ID", {
-    style: "currency",
-    currency: "IDR",
-    maximumFractionDigits: 0,
-  }).format(Number(item.default_sell_price))
+  const categoryLabel = item.category ?? "-"
+  const descriptionLabel = item.description ?? "-"
+  // const price = new Intl.NumberFormat("id-ID", {
+  //   style: "currency",
+  //   currency: "IDR",
+  //   maximumFractionDigits: 0,
+  // }).format(Number(item.default_sell_price))
 
   return (
     <Drawer direction={isMobile ? "bottom" : "right"}>
@@ -149,21 +151,17 @@ function TableCellViewer({ item }: { item: Product }) {
         </DrawerHeader>
         <div className="flex flex-col gap-4 px-4 pb-4 text-sm">
           <div className="flex items-center gap-2">
-            <Badge variant="outline">{item.category}</Badge>
+            <Badge variant="outline">{categoryLabel }</Badge>
             <Badge variant={item.is_active ? "default" : "outline"}>
               {item.is_active ? "Aktif" : "Nonaktif"}
             </Badge>
           </div>
 
-          <div className="font-bold text-lg">{price}</div>
-
-          {item.description && (
+          {/* <div className="font-bold text-lg">{price}</div> */}
             <>
               <Separator />
-              <p>{item.description}</p>
+              <p>{descriptionLabel}</p>
             </>
-          )}
-
           <Separator />
 
           <div className="text-xs text-muted-foreground">
@@ -202,7 +200,6 @@ function DraggableRow({ row }: { row: Row<Product> }) {
       }}
     >
       {row.getVisibleCells().map((cell) => {
-        // khusus kolom drag: inject DragHandle dengan listeners
         if (cell.column.id === "drag") {
           return (
             <TableCell key={cell.id}>
@@ -214,7 +211,6 @@ function DraggableRow({ row }: { row: Row<Product> }) {
           )
         }
 
-        // kolom lain render biasa (klik produk tetap jalan)
         return (
           <TableCell key={cell.id}>
             {flexRender(cell.column.columnDef.cell, cell.getContext())}
@@ -281,7 +277,7 @@ export function DataTableProduct({
       {
         id: "drag",
         header: () => null,
-        cell: () => null, // cell actual-nya ditangani di DraggableRow
+        cell: () => null, 
         enableSorting: false,
         enableHiding: false,
       },
@@ -318,36 +314,37 @@ export function DataTableProduct({
         header: "Produk",
         cell: ({ row }) => <TableCellViewer item={row.original} />,
       },
-      {
-        accessorKey: "sku",
-        header: "SKU",
-        cell: ({ row }) => (
-          <span className="font-mono text-xs">{row.original.sku}</span>
-        ),
-      },
+      // {
+      //   accessorKey: "sku",
+      //   header: "SKU",
+      //   cell: ({ row }) => (
+      //     <span className="font-mono text-xs">{row.original.sku}</span>
+      //   ),
+      // },
       {
         accessorKey: "category",
         header: "Kategori",
         cell: ({ row }) => (
+          
           <Badge variant="outline" className="px-1.5">
-            {row.original.category}
+            {row.original.category ?? "-"}
           </Badge>
         ),
       },
-      {
-        accessorKey: "default_sell_price",
-        header: () => <div className="text-right w-full">Harga Jual</div>,
-        cell: ({ row }) => {
-          const value = Number(row.original.default_sell_price)
-          const formatted = new Intl.NumberFormat("id-ID", {
-            style: "currency",
-            currency: "IDR",
-            maximumFractionDigits: 0,
-          }).format(value)
+      // {
+      //   accessorKey: "default_sell_price",
+      //   header: () => <div className="text-right w-full">Harga Jual</div>,
+      //   cell: ({ row }) => {
+      //     const value = Number(row.original.default_sell_price)
+      //     const formatted = new Intl.NumberFormat("id-ID", {
+      //       style: "currency",
+      //       currency: "IDR",
+      //       maximumFractionDigits: 0,
+      //     }).format(value)
 
-          return <div className="text-right font-medium">{formatted}</div>
-        },
-      },
+      //     return <div className="text-right font-medium">{formatted}</div>
+      //   },
+      // },
       {
         accessorKey: "is_active",
         header: "Status",

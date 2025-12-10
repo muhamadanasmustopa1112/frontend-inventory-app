@@ -34,8 +34,8 @@ export function AddProductDialog({ onSuccess }: AddProductDialogProps) {
     const body = {
       name: formData.get("name"),
       sku: formData.get("sku"),
-      default_sell_price: Number(formData.get("default_sell_price") || 0),
-      category: formData.get("category"),
+      // default_sell_price: Number(formData.get("default_sell_price") || 0),
+      // category: formData.get("category"),
       description: formData.get("description"),
     }
 
@@ -97,10 +97,10 @@ export function AddProductDialog({ onSuccess }: AddProductDialogProps) {
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="sku">SKU</Label>
+            <Label htmlFor="sku">Kode Barang</Label>
             <Input id="sku" name="sku" required />
           </div>
-
+{/* 
           <div className="space-y-2">
             <Label htmlFor="default_sell_price">Harga Jual</Label>
             <Input
@@ -109,12 +109,12 @@ export function AddProductDialog({ onSuccess }: AddProductDialogProps) {
               type="number"
               required
             />
-          </div>
+          </div> */}
 
-          <div className="space-y-2">
+          {/* <div className="space-y-2">
             <Label htmlFor="category">Kategori</Label>
             <Input id="category" name="category" />
-          </div>
+          </div> */}
 
           <div className="space-y-2">
             <Label htmlFor="description">Deskripsi</Label>

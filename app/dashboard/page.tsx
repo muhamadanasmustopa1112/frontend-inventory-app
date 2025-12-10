@@ -1,4 +1,3 @@
-// app/dashboard/analytics/page.tsx
 "use client"
 
 import type React from "react"
@@ -13,18 +12,16 @@ import {
 } from "@/components/ui/sidebar"
 
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card"
-import { RevenueTrendChart } from "./_components/revenue-trend-chart"
 import { StockByCategoryChart } from "./_components/stock-by-category-chart"
 import { StockByWarehouseChart } from "./_components/stock-by-warehouse-chart"
 import { TopProductsTable } from "./_components/top-products-table"
 
 type DashboardData = {
   summary: {
-    totalRevenue: number
     totalUnitsIn: number
+    totalUnitsOut: number
     totalStockQty: number
   }
-  revenueTrend: { date: string; revenue: number }[]
   stockByCategory: { category: string; qty: number }[]
   stockByWarehouse: { warehouse: string; qty: number }[]
   topProducts: { product_id: number; product_name: string; qty: number }[]
@@ -45,7 +42,18 @@ export default function DashboardAnalyticsPage() {
         setError(json?.message || "Gagal mengambil data dashboard")
         setData(null)
       } else {
-        setData(json)
+        // optional basic runtime sanity: ensure numeric values exist
+        const safe: DashboardData = {
+          summary: {
+            totalUnitsIn: Number(json?.summary?.totalUnitsIn ?? 0),
+            totalUnitsOut: Number(json?.summary?.totalUnitsOut ?? 0),
+            totalStockQty: Number(json?.summary?.totalStockQty ?? 0),
+          },
+          stockByCategory: Array.isArray(json?.stockByCategory) ? json.stockByCategory : [],
+          stockByWarehouse: Array.isArray(json?.stockByWarehouse) ? json.stockByWarehouse : [],
+          topProducts: Array.isArray(json?.topProducts) ? json.topProducts : [],
+        }
+        setData(safe)
       }
     } catch (err: any) {
       setError(err?.message ?? "Unexpected error")
@@ -82,7 +90,7 @@ export default function DashboardAnalyticsPage() {
                     Dashboard Analitik
                   </h1>
                   <p className="text-sm text-muted-foreground">
-                    Ringkasan penjualan dan stok berdasarkan data laporan.
+                    Ringkasan stok masuk, keluar, dan saldo berdasarkan data laporan.
                   </p>
                 </div>
 
@@ -107,16 +115,15 @@ export default function DashboardAnalyticsPage() {
                       <Card>
                         <CardHeader>
                           <CardTitle className="text-sm font-medium">
-                            Total Revenue
+                            Total Stock Out (Unit)
                           </CardTitle>
                         </CardHeader>
                         <CardContent>
                           <p className="text-2xl font-bold">
-                            Rp{" "}
-                            {data.summary.totalRevenue.toLocaleString("id-ID")}
+                            {data.summary.totalUnitsOut.toLocaleString("id-ID")}
                           </p>
                           <p className="text-xs text-muted-foreground mt-1">
-                            Total akumulasi dari laporan sales.
+                            Total unit keluar (berdasarkan laporan stock out).
                           </p>
                         </CardContent>
                       </Card>
@@ -132,7 +139,7 @@ export default function DashboardAnalyticsPage() {
                             {data.summary.totalUnitsIn.toLocaleString("id-ID")}
                           </p>
                           <p className="text-xs text-muted-foreground mt-1">
-                            Total unit masuk (berdasarkan halaman laporan).
+                            Total unit masuk (berdasarkan laporan).
                           </p>
                         </CardContent>
                       </Card>
@@ -154,18 +161,6 @@ export default function DashboardAnalyticsPage() {
                       </Card>
                     </div>
 
-                    {/* Revenue trend */}
-                    <Card>
-                      <CardHeader>
-                        <CardTitle className="text-sm font-medium">
-                          Trend Revenue per Tanggal
-                        </CardTitle>
-                      </CardHeader>
-                      <CardContent>
-                        <RevenueTrendChart data={data.revenueTrend} />
-                      </CardContent>
-                    </Card>
-
                     {/* Stock charts */}
                     <div className="grid gap-4 md:grid-cols-2">
                       <Card>
@@ -186,9 +181,7 @@ export default function DashboardAnalyticsPage() {
                           </CardTitle>
                         </CardHeader>
                         <CardContent>
-                          <StockByWarehouseChart
-                            data={data.stockByWarehouse}
-                          />
+                          <StockByWarehouseChart data={data.stockByWarehouse} />
                         </CardContent>
                       </Card>
                     </div>

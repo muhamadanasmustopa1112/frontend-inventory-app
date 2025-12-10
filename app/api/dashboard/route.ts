@@ -1,4 +1,3 @@
-// app/api/dashboard/route.ts
 import { NextRequest, NextResponse } from "next/server"
 
 type SalesResponse = {
@@ -14,6 +13,13 @@ type SalesResponse = {
 type StockInResponse = {
   summary?: {
     total_units_in_page?: string
+    total_transactions?: number
+  }
+}
+
+type StockOutResponse = {
+  summary?: {
+    total_units_out_page?: string
     total_transactions?: number
   }
 }
@@ -35,15 +41,18 @@ type StockBalanceResponse = {
 export async function GET(req: NextRequest) {
   try {
     const cookie = req.headers.get("cookie") || ""
-
     const base = new URL(req.url).origin
 
-    const [salesRes, stockInRes, stockBalanceRes] = await Promise.all([
+    const [salesRes, stockInRes, stockOutRes, stockBalanceRes] = await Promise.all([
       fetch(`${base}/api/reports/sales`, {
         headers: { cookie },
         cache: "no-store",
       }),
       fetch(`${base}/api/reports/stock-in`, {
+        headers: { cookie },
+        cache: "no-store",
+      }),
+      fetch(`${base}/api/reports/stock-out`, {
         headers: { cookie },
         cache: "no-store",
       }),
@@ -54,25 +63,21 @@ export async function GET(req: NextRequest) {
     ])
 
     const salesJson = (await salesRes.json().catch(() => null)) as SalesResponse
-    const stockInJson = (await stockInRes
-      .json()
-      .catch(() => null)) as StockInResponse
-    const stockBalanceJson = (await stockBalanceRes
-      .json()
-      .catch(() => null)) as StockBalanceResponse
+    const stockInJson = (await stockInRes.json().catch(() => null)) as StockInResponse
+    const stockOutJson = (await stockOutRes.json().catch(() => null)) as StockOutResponse
+    const stockBalanceJson = (await stockBalanceRes.json().catch(() => null)) as StockBalanceResponse
 
     // ---- Summary ----
     const totalRevenue = Number(salesJson?.summary?.total_revenue ?? 0)
-    const totalUnitsIn = Number(
-      stockInJson?.summary?.total_units_in_page ?? 0
-    )
+    const totalUnitsIn = Number(stockInJson?.summary?.total_units_in_page ?? 0)
+    const totalUnitsOut = Number(stockOutJson?.summary?.total_units_out_page ?? 0)
     const totalStockQty = Number(stockBalanceJson?.summary?.total_qty ?? 0)
 
     // ---- Revenue trend by date ----
     const revenueTrendMap: Record<string, number> = {}
 
     for (const row of salesJson?.data ?? []) {
-      const d = row.date_out?.slice(0, 10) // "YYYY-MM-DD"
+      const d = row.date_out?.slice(0, 10)
       if (!d) continue
       const amount = Number(row.total_price ?? 0)
       revenueTrendMap[d] = (revenueTrendMap[d] || 0) + amount
@@ -97,8 +102,7 @@ export async function GET(req: NextRequest) {
       stockByCategoryMap[cat] = (stockByCategoryMap[cat] || 0) + (row.qty ?? 0)
 
       const wh = row.warehouse_name || "Tanpa Warehouse"
-      stockByWarehouseMap[wh] =
-        (stockByWarehouseMap[wh] || 0) + (row.qty ?? 0)
+      stockByWarehouseMap[wh] = (stockByWarehouseMap[wh] || 0) + (row.qty ?? 0)
 
       const key = `${row.product_id}`
       if (!productQtyMap[key]) {
@@ -129,6 +133,7 @@ export async function GET(req: NextRequest) {
         summary: {
           totalRevenue,
           totalUnitsIn,
+          totalUnitsOut,
           totalStockQty,
         },
         revenueTrend,

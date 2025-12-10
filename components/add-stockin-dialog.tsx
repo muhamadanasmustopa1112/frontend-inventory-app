@@ -208,7 +208,7 @@ export function AddStockInDialog({ onSuccess }: AddStockInDialogProps) {
         <Button size="sm">+ Stock In</Button>
       </DialogTrigger>
 
-      <DialogContent className="max-w-3xl">
+      <DialogContent className="max-w-3xl max-h-[80vh] overflow-hidden">
         <DialogHeader>
           <DialogTitle>Tambah Transaksi Barang Masuk</DialogTitle>
           <DialogDescription>
@@ -216,15 +216,20 @@ export function AddStockInDialog({ onSuccess }: AddStockInDialogProps) {
           </DialogDescription>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit} className="space-y-6">
-          {/* Header Form */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {/* Gudang */}
-            <div className="space-y-2">
-              <Label>Gudang</Label>
+        {/* Form — footer berada di dalam form supaya tombol submit langsung bekerja */}
+        <form onSubmit={handleSubmit} className="flex flex-col h-full">
+          {/* Scrollable body */}
+          <div
+            className="overflow-y-auto px-0 pt-0 pb-4"
+            style={{ maxHeight: "calc(80vh - 140px)" }}
+          >
+            {/* Header Form */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 px-4 pt-2">
+              {/* Gudang */}
+              <div className="space-y-2 min-w-0">
+                <Label>Gudang</Label>
 
-              {isWarehouseStaff ? (
-                <>
+                {isWarehouseStaff ? (
                   <Input
                     value={
                       selectedWarehouse
@@ -232,180 +237,161 @@ export function AddStockInDialog({ onSuccess }: AddStockInDialogProps) {
                         : `Gudang ID ${user?.warehouse_id}`
                     }
                     disabled
+                    className="w-full truncate"
                   />
-                </>
-              ) : (
-                <Select
-                  value={warehouseId}
-                  onValueChange={(val) => setWarehouseId(val)}
-                >
-                  <SelectTrigger id="warehouse_id">
-                    <SelectValue
-                      placeholder={
-                        warehouses.length ? "Pilih Gudang" : "Memuat..."
-                      }
-                    />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {warehouses.map((wh) => (
-                      <SelectItem key={wh.id} value={String(wh.id)}>
-                        {wh.name} — {wh.city}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              )}
+                ) : (
+                  <Select value={warehouseId} onValueChange={(val) => setWarehouseId(val)}>
+                    <SelectTrigger id="warehouse_id" className="w-full">
+                      <SelectValue placeholder={warehouses.length ? "Pilih Gudang" : "Memuat..."} />
+                    </SelectTrigger>
+                    <SelectContent className="max-h-[300px] overflow-y-auto">
+                      {warehouses.map((wh) => (
+                        <SelectItem key={wh.id} value={String(wh.id)}>
+                          <div className="flex flex-col w-full">
+                            {/* Jika field sku tidak ada, bagian ini aman tetap ditampilkan */}
+                            {wh.sku && (
+                              <span className="text-[11px] font-mono text-muted-foreground">
+                                {wh.sku}
+                              </span>
+                            )}
+                            <span className="text-xs md:text-sm truncate max-w-[220px]">
+                              {wh.name} — {wh.city}
+                            </span>
+                          </div>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
+              </div>
+
+              {/* Tanggal masuk */}
+              <div className="space-y-2 min-w-0">
+                <Label htmlFor="date_in">Tanggal Masuk</Label>
+                <Input id="date_in" name="date_in" type="date" required className="w-full" />
+              </div>
+
+              {/* Surat Jalan */}
+              <div className="space-y-2 md:col-span-2">
+                <Label htmlFor="reference">Surat Jalan</Label>
+                <Input id="reference" name="reference" placeholder="INV-001 / DO-123 / dll" className="w-full" />
+              </div>
+
+              {/* Catatan */}
+              <div className="space-y-2 md:col-span-2">
+                <Label htmlFor="note">Catatan</Label>
+                <Textarea
+                  id="note"
+                  name="note"
+                  placeholder="Catatan tambahan / keterangan barang masuk"
+                  className="min-h-[80px] resize-y w-full"
+                />
+              </div>
             </div>
 
-            {/* Tanggal masuk */}
-            <div className="space-y-2">
-              <Label htmlFor="date_in">Tanggal Masuk</Label>
-              <Input id="date_in" name="date_in" type="date" required />
-            </div>
+            {/* Item Section */}
+            <div className="space-y-3 px-4 mt-4">
+              <div className="flex items-center justify-between">
+                <Label className="font-medium">Item Barang</Label>
+                <Button type="button" size="sm" variant="secondary" onClick={addItemRow}>
+                  + Tambah Item
+                </Button>
+              </div>
 
-            <div className="space-y-2 md:col-span-2">
-              <Label htmlFor="reference">Referensi</Label>
-              <Input
-                id="reference"
-                name="reference"
-                placeholder="INV-001 / DO-123 / dll"
-              />
-            </div>
+              <div className="space-y-5 max-h-[40vh] overflow-y-auto pr-1">
+                {items.map((item, idx) => (
+                  <div
+                    key={idx}
+                    className="grid grid-cols-1 gap-3 p-3 border rounded-lg relative md:grid-cols-2 min-w-0"
+                  >
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      className="absolute top-1 right-1 text-destructive"
+                      onClick={() => removeItemRow(idx)}
+                      disabled={items.length === 1}
+                    >
+                      ✕
+                    </Button>
 
-            <div className="space-y-2 md:col-span-2">
-              <Label htmlFor="note">Catatan</Label>
-              <Textarea
-                id="note"
-                name="note"
-                placeholder="Catatan tambahan / keterangan barang masuk"
-                className="min-h-[80px] resize-y"
-              />
+                    {/* Produk */}
+                    <div className="space-y-2 min-w-0">
+                      <Label>Produk</Label>
+                      <Select
+                        value={item.product_id}
+                        onValueChange={(val) => {
+                          updateItemRow(idx, "product_id", val)
+                          const p = products.find((pr) => String(pr.id) === val)
+                          if (p) {
+                            updateItemRow(idx, "sell_price", String(p.default_sell_price ?? ""))
+                          }
+                        }}
+                      >
+                        <SelectTrigger className="w-full">
+                          <SelectValue placeholder="Pilih Produk" />
+                        </SelectTrigger>
+                        <SelectContent className="max-h-[300px] overflow-y-auto">
+                          {products.map((pr) => (
+                            <SelectItem key={pr.id} value={String(pr.id)}>
+                              <div className="flex flex-col w-full">
+                                {pr.sku && (
+                                  <span className="text-[11px] font-mono text-muted-foreground">
+                                    {pr.sku}
+                                  </span>
+                                )}
+                                <span className="text-xs md:text-sm truncate max-w-[220px]">
+                                  {pr.name}
+                                </span>
+                              </div>
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    {/* Qty */}
+                    <div className="space-y-2 min-w-0">
+                      <Label>Qty</Label>
+                      <Input
+                        type="number"
+                        placeholder="Qty"
+                        value={item.qty}
+                        onChange={(e) => updateItemRow(idx, "qty", e.target.value)}
+                        required
+                        className="w-full"
+                      />
+                    </div>
+
+                    {/* jika mau menampilkan harga jual / beli, aktifkan kembali di sini */}
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
 
-          {/* Item Section */}
-          <div className="space-y-3">
-            <div className="flex items-center justify-between">
-              <Label className="font-medium">Item Barang</Label>
+          {/* Sticky footer — selalu visible */}
+          <DialogFooter className="sticky bottom-0 bg-background/90 backdrop-blur-sm border-t px-4 py-3">
+            <div className="w-full flex items-center justify-end gap-2">
               <Button
+                variant="ghost"
                 type="button"
-                size="sm"
-                variant="secondary"
-                onClick={addItemRow}
+                onClick={() => {
+                  // reset & tutup
+                  setOpen(false)
+                }}
+                disabled={loading}
               >
-                + Tambah Item
+                Batal
+              </Button>
+
+              <Button type="submit" disabled={loading}>
+                {loading ? "Menyimpan..." : "Simpan Transaksi"}
               </Button>
             </div>
-
-            <div className="space-y-5 max-h-[260px] overflow-y-auto pr-1">
-              {items.map((item, idx) => (
-                <div
-                  key={idx}
-                  className="
-                    grid grid-cols-1 gap-3 p-3 border rounded-lg relative
-                    md:grid-cols-2
-                  "
-                >
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    className="absolute top-1 right-1 text-destructive"
-                    onClick={() => removeItemRow(idx)}
-                    disabled={items.length === 1}
-                  >
-                    ✕
-                  </Button>
-
-                  {/* Produk */}
-                  <div className="space-y-2">
-                    <Label>Produk</Label>
-                    <Select
-                      value={item.product_id}
-                      onValueChange={(val) => {
-                        updateItemRow(idx, "product_id", val)
-
-                        const p = products.find(
-                          (pr) => String(pr.id) === val
-                        )
-                        if (p) {
-                          updateItemRow(
-                            idx,
-                            "sell_price",
-                            String(p.default_sell_price ?? "")
-                          )
-                        }
-                      }}
-                    >
-                      <SelectTrigger className="w-full">
-                        <SelectValue placeholder="Pilih Produk" />
-                      </SelectTrigger>
-                      <SelectContent className="max-h-[300px] overflow-y-auto">
-                        {products.map((pr) => (
-                          <SelectItem key={pr.id} value={String(pr.id)}>
-                            <div className="flex flex-col w-full">
-                              <span className="text-[11px] font-mono text-muted-foreground">
-                                {pr.sku}
-                              </span>
-                              <span className="text-xs md:text-sm truncate max-w-[220px]">
-                                {pr.name}
-                              </span>
-                            </div>
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  {/* Qty */}
-                  <div className="space-y-2">
-                    <Label>Qty</Label>
-                    <Input
-                      type="number"
-                      placeholder="Qty"
-                      value={item.qty}
-                      onChange={(e) =>
-                        updateItemRow(idx, "qty", e.target.value)
-                      }
-                      required
-                    />
-                  </div>
-
-                  {/* Harga Jual */}
-                  <div className="space-y-2">
-                    <Label>Harga Jual</Label>
-                    <Input
-                      type="number"
-                      value={item.sell_price}
-                      onChange={(e) =>
-                        updateItemRow(idx, "sell_price", e.target.value)
-                      }
-                      required
-                    />
-                  </div>
-
-                  {/* Harga Beli */}
-                  <div className="space-y-2">
-                    <Label>Harga Beli</Label>
-                    <Input
-                      type="number"
-                      value={item.buy_price}
-                      onChange={(e) =>
-                        updateItemRow(idx, "buy_price", e.target.value)
-                      }
-                    />
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          <DialogFooter>
-            <Button type="submit" disabled={loading}>
-              {loading ? "Menyimpan..." : "Simpan Transaksi"}
-            </Button>
           </DialogFooter>
         </form>
       </DialogContent>
+
     </Dialog>
   )
 }

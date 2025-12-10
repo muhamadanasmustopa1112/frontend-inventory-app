@@ -104,7 +104,7 @@ export function EditProductDialog({
             <Input name="sku" defaultValue={product.sku} required />
           </div>
 
-          <div className="space-y-2">
+          {/* <div className="space-y-2">
             <Label>Harga Jual</Label>
             <Input
               name="default_sell_price"
@@ -112,12 +112,12 @@ export function EditProductDialog({
               defaultValue={product.default_sell_price}
               required
             />
-          </div>
+          </div> */}
 
-          <div className="space-y-2">
+          {/* <div className="space-y-2">
             <Label>Kategori</Label>
             <Input name="category" defaultValue={product.category} />
-          </div>
+          </div> */}
 
           <div className="space-y-2">
             <Label>Deskripsi</Label>

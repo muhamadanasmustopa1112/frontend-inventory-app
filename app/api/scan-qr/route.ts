@@ -28,18 +28,11 @@ async function getCurrentUser(token: string): Promise<BackendUser | null> {
 
   const data = await res.json().catch(() => null)
 
-  // kalau backend balikin { data: {...} } sesuaikan di sini
   const user = (data?.data as BackendUser) ?? (data as BackendUser)
   return user ?? null
 }
 
-/**
- * POST /api/scan-qr
- *
- * - Ambil token dari cookie (sama kayak /api/stock-in)
- * - Validasi user lewat /me (optional tapi konsisten)
- * - Teruskan request ke backend Laravel: POST /api/scan-qr
- */
+
 export async function POST(req: NextRequest) {
   try {
     if (!API_URL) {
@@ -49,7 +42,6 @@ export async function POST(req: NextRequest) {
       )
     }
 
-    // Ambil token dari cookie
     const token = (await cookies()).get("token")?.value
     if (!token) {
       return NextResponse.json(
@@ -58,7 +50,6 @@ export async function POST(req: NextRequest) {
       )
     }
 
-    // Optional: cek user valid (biar konsisten sama /stock-in)
     const user = await getCurrentUser(token)
     if (!user) {
       return NextResponse.json(
@@ -76,13 +67,12 @@ export async function POST(req: NextRequest) {
       )
     }
 
-    // Teruskan ke Laravel: POST /api/scan-qr
     const res = await fetch(`${API_URL}/scan-qr`, {
       method: "POST",
       headers: {
         Accept: "application/json",
         "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`, // ⬅️ pakai token user, sama kayak /stock-in
+        Authorization: `Bearer ${token}`, 
       },
       body: JSON.stringify({ code: body.code }),
       cache: "no-store",
@@ -91,7 +81,6 @@ export async function POST(req: NextRequest) {
     const data = await res.json().catch(() => null)
 
     if (!res.ok) {
-      // error dari backend (404 unit not found, 409 status tidak IN_STOCK, dll)
       return NextResponse.json(
         {
           message: data?.message || "Failed to scan QR",

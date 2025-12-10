@@ -10,7 +10,6 @@ import { Skeleton } from "@/components/ui/skeleton"
 import { AppSidebar } from "@/components/app-sidebar"
 import { SiteHeader } from "@/components/site-header"
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar"
-import { Button } from "@/components/ui/button"
 
 import {
   DataTableStockOut,
@@ -112,9 +111,8 @@ export default function Page() {
       "Tanggal",
       "Warehouse",
       "Buyer",
-      "Invoice",
+      "Surat Jalan",
       "Catatan",
-      "Total Price",
     ]
 
     const rowsCsv = stockOuts.map((row) => [
@@ -124,7 +122,6 @@ export default function Page() {
       toCsvValue(row.buyer?.name ?? ""),
       toCsvValue(row.reference ?? ""),
       toCsvValue(row.note ?? ""),
-      toCsvValue(row.total_price ?? 0),
     ])
 
     const csvLines = [

@@ -82,8 +82,8 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import Link from "next/link"
+import {PrintButton} from "./print-button"
 
-// ================== SCHEMA STOCK OUT ==================
 
 const warehouseSchema = z.object({
   id: z.number(),
@@ -111,12 +111,13 @@ const productSchema = z.object({
   sku: z.string(),
   name: z.string(),
   default_sell_price: z.string(),
-  category: z.string(),
-  description: z.string(),
+  category: z.string().nullable().optional(),
+  description: z.string().nullable().optional(),
   is_active: z.number(),
   created_at: z.string(),
   updated_at: z.string(),
 })
+
 
 const stockOutItemSchema = z.object({
   id: z.number(),
@@ -136,8 +137,8 @@ export const stockOutSchema = z.object({
   buyer_id: z.number(),
   date_out: z.string(),
   reference: z.string(),
-  total_price: z.string(),
-  note: z.string().nullable(),
+  total_price: z.string().nullable().optional(),
+  note: z.string().nullable().optional(),
   created_by: z.number(),
   created_at: z.string(),
   updated_at: z.string(),
@@ -190,7 +191,7 @@ function StockOutCellViewer({ item }: { item: StockOut }) {
       <DrawerContent>
         <DrawerHeader className="gap-1">
           <DrawerTitle>
-            {item.buyer?.name || `Transaksi #${item.id}`}
+            {item.buyer?.name || `Surat Jalan #${item.id}`}
           </DrawerTitle>
           <DrawerDescription>
             {item.warehouse?.name} •{" "}
@@ -212,7 +213,7 @@ function StockOutCellViewer({ item }: { item: StockOut }) {
             <Badge variant="outline">
               Buyer: {item.buyer?.name}
             </Badge>
-            <Badge variant="outline">Total Qty: {totalQty}</Badge>
+            {/* <Badge variant="outline">Total Qty: {totalQty}</Badge>
             <Badge variant="outline">
               Total:{" "}
               {new Intl.NumberFormat("id-ID", {
@@ -220,7 +221,7 @@ function StockOutCellViewer({ item }: { item: StockOut }) {
                 currency: "IDR",
                 maximumFractionDigits: 0,
               }).format(Number(item.total_price))}
-            </Badge>
+            </Badge> */}
           </div>
 
           {item.note && (
@@ -251,14 +252,14 @@ function StockOutCellViewer({ item }: { item: StockOut }) {
                   </div>
                   <div className="text-right">
                     <div>Qty: {it.qty}</div>
-                    <div className="text-[11px] text-muted-foreground">
+                    {/* <div className="text-[11px] text-muted-foreground">
                       Jual:{" "}
                       {new Intl.NumberFormat("id-ID", {
                         style: "currency",
                         currency: "IDR",
                         maximumFractionDigits: 0,
                       }).format(Number(it.sell_price))}
-                    </div>
+                    </div> */}
                   </div>
                 </div>
               ))}
@@ -419,7 +420,7 @@ export function DataTableStockOut({
       // ==== Kolom transaksi (drawer detail) ====
       {
         id: "ref",
-        header: "Transaksi",
+        header: "Pembeli",
         cell: ({ row }) => <StockOutCellViewer item={row.original} />,
       },
 
@@ -452,7 +453,7 @@ export function DataTableStockOut({
 
       {
         accessorKey: "reference",
-        header: "Invoice",
+        header: "Surat Jalan",
         cell: ({ row }) => {
           return (
             <div className="flex flex-col">
@@ -487,20 +488,20 @@ export function DataTableStockOut({
           </div>
         ),
       },
-      {
-        accessorKey: "buyer.name",
-        header: "Buyer",
-        cell: ({ row }) => (
-          <div className="flex flex-col">
-            <span>{row.original.buyer?.name}</span>
-            {row.original.buyer?.phone && (
-              <span className="text-xs text-muted-foreground">
-                {row.original.buyer.phone}
-              </span>
-            )}
-          </div>
-        ),
-      },
+      // {
+      //   accessorKey: "buyer.name",
+      //   header: "Buyer",
+      //   cell: ({ row }) => (
+      //     <div className="flex flex-col">
+      //       <span>{row.original.buyer?.name}</span>
+      //       {row.original.buyer?.phone && (
+      //         <span className="text-xs text-muted-foreground">
+      //           {row.original.buyer.phone}
+      //         </span>
+      //       )}
+      //     </div>
+      //   ),
+      // },
       {
         id: "total_items",
         header: "Jml Item",
@@ -512,19 +513,19 @@ export function DataTableStockOut({
         cell: ({ row }) =>
           row.original.items.reduce((sum, item) => sum + item.qty, 0),
       },
-      {
-        id: "total_price",
-        header: "Total Harga",
-        cell: ({ row }) => (
-          <div className="text-right text-sm">
-            {new Intl.NumberFormat("id-ID", {
-              style: "currency",
-              currency: "IDR",
-              maximumFractionDigits: 0,
-            }).format(Number(row.original.total_price))}
-          </div>
-        ),
-      },
+      // {
+      //   id: "total_price",
+      //   header: "Total Harga",
+      //   cell: ({ row }) => (
+      //     <div className="text-right text-sm">
+      //       {new Intl.NumberFormat("id-ID", {
+      //         style: "currency",
+      //         currency: "IDR",
+      //         maximumFractionDigits: 0,
+      //       }).format(Number(row.original.total_price))}
+      //     </div>
+      //   ),
+      // },
       {
         accessorKey: "note",
         header: "Catatan",
@@ -536,24 +537,10 @@ export function DataTableStockOut({
       },
       {
         id: "actions",
-        cell: () => (
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button
-                variant="ghost"
-                className="data-[state=open]:bg-muted text-muted-foreground flex size-8"
-                size="icon"
-              >
-                <IconDotsVertical />
-                <span className="sr-only">Open menu</span>
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-36">
-              <DropdownMenuItem className="text-destructive">
-                Hapus
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+        cell: ({ row }) => (
+          <div className="flex items-center gap-2">
+            <PrintButton item={row.original} label="Print" />
+          </div>
         ),
       },
     ],

@@ -8,6 +8,7 @@ import {
   IconDatabase,
   IconInnerShadowTop,
   IconListDetails,
+  IconLogs,
   IconPackageExport,
   IconPackageImport,
   IconUsers,
@@ -79,6 +80,11 @@ const data = {
       title: "Laporan",
       url: "/reports",
       icon: IconDatabase,
+    },
+    {
+      title: "Log Aktivitas",
+      url: "/logs",
+      icon: IconLogs,
     },
   ],
 }

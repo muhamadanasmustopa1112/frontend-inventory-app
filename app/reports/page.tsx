@@ -10,9 +10,9 @@ import {
 } from "@/components/ui/sidebar"
 
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
-import { SalesReportSection } from "./_components/sales-report-section"
-import { StockInReportSection } from "./_components/stock-in-report-section"
+import StockInReportSection  from "./_components/stock-in-report-section"
 import { StockBalanceReportSection } from "./_components/stock-balance-report-section"
+import StockOutReportSection from "./_components/stock-out-report-section"
 
 export default function Page() {
   return (
@@ -44,7 +44,7 @@ export default function Page() {
 
                 <Tabs defaultValue="sales" className="space-y-4">
                   <TabsList>
-                    <TabsTrigger value="sales">Sales</TabsTrigger>
+                    <TabsTrigger value="sales">Stock Out</TabsTrigger>
                     <TabsTrigger value="stock-in">Stock In</TabsTrigger>
                     <TabsTrigger value="stock-balance">
                       Stock Balance
@@ -52,7 +52,7 @@ export default function Page() {
                   </TabsList>
 
                   <TabsContent value="sales">
-                    <SalesReportSection />
+                    <StockOutReportSection />
                   </TabsContent>
 
                   <TabsContent value="stock-in">

@@ -78,6 +78,13 @@ export type StockInSummary = {
   date_to: string | null
   warehouse_id: number | null
 }
+export type StockOutSummary = {
+  total_transactions: number
+  total_units_in_page: string
+  date_from: string | null
+  date_to: string | null
+  warehouse_id: number | null
+}
 
 export type StockInWarehouse = SalesWarehouse
 
@@ -97,6 +104,19 @@ export type StockInRow = {
   id: number
   warehouse_id: number
   date_in: string
+  reference: string
+  note: string | null
+  created_by: number
+  created_at: string
+  updated_at: string
+  warehouse: StockInWarehouse
+  items: StockInItem[]
+}
+
+export type StockOutRow = {
+  id: number
+  warehouse_id: number
+  date_out: string
   reference: string
   note: string | null
   created_by: number

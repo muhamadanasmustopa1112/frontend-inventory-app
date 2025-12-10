@@ -86,6 +86,7 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import { AddStockInDialog } from "./add-stockin-dialog"
+import { PrintButtonStockIn } from "./print-button-stockin"
 
 // ================== SCHEMA STOCK IN ==================
 
@@ -222,14 +223,14 @@ function StockInCellViewer({ item }: { item: StockIn }) {
                   </div>
                   <div className="text-right">
                     <div>Qty: {it.qty}</div>
-                    <div className="text-[11px] text-muted-foreground">
+                    {/* <div className="text-[11px] text-muted-foreground">
                       Jual:{" "}
                       {new Intl.NumberFormat("id-ID", {
                         style: "currency",
                         currency: "IDR",
                         maximumFractionDigits: 0,
                       }).format(Number(it.sell_price))}
-                    </div>
+                    </div> */}
                   </div>
                 </div>
               ))}
@@ -346,56 +347,6 @@ export function DataTableStockIn({
     })
   }
 
-  async function handleDownloadQR(stockIn: StockIn) {
-    try {
-      if (!stockIn.items?.length) {
-        toast.error("Tidak ada item dalam transaksi ini.")
-        return
-      }
-
-      const zip = new JSZip()
-
-      for (const item of stockIn.items) {
-        const productName = item.product?.name || "Produk"
-        const sku = item.product?.sku || "SKU"
-        const totalQty = item.qty
-
-        for (let i = 1; i <= totalQty; i++) {
-          // teks yang dimasukkan ke QR
-          const qrText = `${sku}-${String(i).padStart(3, "0")}`
-
-          // generate QR jadi dataURL (base64 PNG)
-          const dataUrl = await QRCode.toDataURL(qrText, {
-            margin: 1,
-            width: 400,
-          })
-
-          const base64 = dataUrl.split(",")[1]
-
-          // nama file di ZIP, misal: TGR001-001.png
-          const fileName = `${qrText}.png`
-
-          zip.file(fileName, base64, { base64: true })
-        }
-      }
-
-      const blob = await zip.generateAsync({ type: "blob" })
-      const url = URL.createObjectURL(blob)
-
-      const a = document.createElement("a")
-      a.href = url
-      a.download = `QR-StockIn-${stockIn.id}.zip`
-      document.body.appendChild(a)
-      a.click()
-      document.body.removeChild(a)
-      URL.revokeObjectURL(url)
-
-      toast.success("QR berhasil didownload sebagai ZIP")
-    } catch (err) {
-      console.error(err)
-      toast.error("Gagal membuat file QR")
-    }
-  }
 
   // ================== KOLOM TABEL ==================
   const columns: ColumnDef<StockIn>[] = React.useMemo(
@@ -439,7 +390,7 @@ export function DataTableStockIn({
       // ==== Kolom transaksi (drawer detail) ====
       {
         id: "ref",
-        header: "Transaksi",
+        header: "Surat Jalan",
         cell: ({ row }) => <StockInCellViewer item={row.original} />,
       },
 
@@ -525,32 +476,10 @@ export function DataTableStockIn({
       {
         id: "actions",
         cell: ({ row }) => {
-          const stockIn = row.original
-
           return (
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button
-                  variant="ghost"
-                  className="data-[state=open]:bg-muted text-muted-foreground flex size-8"
-                  size="icon"
-                >
-                  <IconDotsVertical />
-                  <span className="sr-only">Open menu</span>
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-44">
-                <DropdownMenuItem
-                    onClick={() => handleDownloadQR(stockIn)}
-                    >
-                    Download QR (Semua Unit)
-                </DropdownMenuItem>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem className="text-destructive">
-                  Hapus
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
+            <div className="flex items-center gap-2">
+              <PrintButtonStockIn item={row.original} label="Print" />
+            </div>
           )
         },
       },

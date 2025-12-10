@@ -170,14 +170,58 @@ export function DataTableProductUnits({
           <Button
             variant="outline"
             size="sm"
-            onClick={() => {
-              window.open(`https://inventory-app.ptspsi.co.id/qr/product-unit/${row.original.id}`,"_blank")
+            onClick={async () => {
+              try {
+                const res = await fetch(
+                  `https://inventory-app.ptspsi.co.id/qr/product-unit/${row.original.id}`,
+                  { method: "GET" }
+                )
+
+                if (!res.ok) {
+                  throw new Error(`Server responded ${res.status}`)
+                }
+
+                const blob = await res.blob()
+
+                const disposition = res.headers.get("content-disposition") || ""
+                let filenameMatch = disposition.match(/filename\*?=(?:UTF-8'')?"?([^";]+)/i)
+                let filename = filenameMatch ? decodeURIComponent(filenameMatch[1]) : ""
+
+                if (!filename) {
+                  const ct = (res.headers.get("content-type") || "").toLowerCase()
+                  const ext = ct.includes("png")
+                    ? "png"
+                    : ct.includes("svg")
+                    ? "svg"
+                    : ct.includes("pdf")
+                    ? "pdf"
+                    : ct.includes("jpeg") || ct.includes("jpg")
+                    ? "jpg"
+                    : "bin"
+                  filename = `${row.original.unit_code}.${ext}`
+                }
+
+                const url = URL.createObjectURL(blob)
+                const a = document.createElement("a")
+                a.href = url
+                a.download = filename
+                document.body.appendChild(a)
+                a.click()
+                a.remove()
+                URL.revokeObjectURL(url)
+              } catch (err) {
+                console.error("Download QR gagal:", err)
+                alert(
+                  "Gagal mengunduh QR."
+                )
+              }
             }}
           >
             QR
           </Button>
         ),
-      },
+      }
+
     ],
     []
   )

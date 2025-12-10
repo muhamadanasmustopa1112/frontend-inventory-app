@@ -71,17 +71,15 @@ export async function GET(req: NextRequest) {
     if (dateTo) qs.set("date_to", dateTo)
     if (perPage) qs.set("per_page", perPage)
 
-    // staff gudang → paksa pakai gudangnya sendiri
     if (user.warehouse_id !== null) {
       qs.set("warehouse_id", String(user.warehouse_id))
     } else {
-      // admin → boleh kirim warehouse_id dari query
       if (requestedWarehouseId) {
         qs.set("warehouse_id", requestedWarehouseId)
       }
     }
 
-    const backendUrl = `${API_URL}/reports/stock-in${
+    const backendUrl = `${API_URL}/reports/stock-out${
       qs.toString() ? `?${qs.toString()}` : ""
     }`
 
@@ -99,7 +97,7 @@ export async function GET(req: NextRequest) {
     if (!res.ok) {
       return NextResponse.json(
         {
-          message: data?.message || "Failed to fetch stock-in report",
+          message: data?.message || "Failed to fetch stock-out report",
           errors: data?.errors,
         },
         { status: res.status }
@@ -108,10 +106,10 @@ export async function GET(req: NextRequest) {
 
     return NextResponse.json(data, { status: 200 })
   } catch (error: any) {
-    console.error("Error fetching stock-in report:", error)
+    console.error("Error fetching stock-out report:", error)
     return NextResponse.json(
       {
-        message: "Unexpected error when fetching stock-in report",
+        message: "Unexpected error when fetching stock-out report",
         error: error?.message ?? String(error),
       },
       { status: 500 }

@@ -1,4 +1,3 @@
-// app/reports/_components/stock-in-report-section.tsx
 "use client"
 
 import * as React from "react"
@@ -6,14 +5,6 @@ import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import {
-  Table,
-  TableHeader,
-  TableRow,
-  TableHead,
-  TableBody,
-  TableCell,
-} from "@/components/ui/table"
 import {
   StockInRow,
   StockInSummary,
@@ -29,6 +20,16 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 
+import {
+  ResponsiveContainer,
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  Tooltip,
+  CartesianGrid,
+} from "recharts"
+
 function formatDate(value: string) {
   if (!value) return "-"
   const d = new Date(value)
@@ -43,10 +44,10 @@ function formatNumber(value: string | number | null | undefined) {
   return num.toLocaleString("id-ID")
 }
 
-export function StockInReportSection() {
+export default function StockInReportSection() {
   const user = useAuthStore((state) => state.user)
   const isWarehouseScoped = !!user?.warehouse_id
-  const isAdmin = !isWarehouseScoped // admin pusat = tidak punya warehouse_id
+  const isAdmin = !isWarehouseScoped 
 
   const [dateFrom, setDateFrom] = React.useState("")
   const [dateTo, setDateTo] = React.useState("")
@@ -135,10 +136,34 @@ export function StockInReportSection() {
     fetchStockIn(1)
   }
 
+  // --- prepare chart data: group by date and sum total qty per date ---
+  const chartData = React.useMemo(() => {
+    if (!rows || rows.length === 0) return []
+
+    const map = new Map<string, number>()
+
+    for (const r of rows) {
+      const key = formatDate(r.date_in)
+      const totalQty = r.items?.reduce((s, it) => s + (it.qty ?? 0), 0) ?? 0
+      map.set(key, (map.get(key) ?? 0) + totalQty)
+    }
+
+    // convert to array sorted by date (attempt to parse back to Date for sorting)
+    const arr = Array.from(map.entries()).map(([label, value]) => ({ label, value }))
+
+    arr.sort((a, b) => {
+      const da = new Date(a.label)
+      const db = new Date(b.label)
+      return da.getTime() - db.getTime()
+    })
+
+    return arr
+  }, [rows])
+
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Laporan Stock In</CardTitle>
+        <CardTitle>Laporan Stock In (Chart)</CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
         {/* Ringkasan */}
@@ -146,14 +171,10 @@ export function StockInReportSection() {
           <div className="rounded-md border bg-muted/40 p-3 text-sm flex flex-wrap gap-4">
             <div>
               <span className="text-muted-foreground">Total transaksi:</span>{" "}
-              <span className="font-semibold">
-                {summary.total_transactions}
-              </span>
+              <span className="font-semibold">{summary.total_transactions}</span>
             </div>
             <div>
-              <span className="text-muted-foreground">
-                Total unit (page):
-              </span>{" "}
+              <span className="text-muted-foreground">Total unit (page):</span>{" "}
               <span className="font-semibold">
                 {formatNumber(summary.total_units_in_page)}
               </span>
@@ -182,10 +203,6 @@ export function StockInReportSection() {
             />
           </div>
 
-          {/* Filter Gudang:
-              - Admin pusat: tampil Select Gudang
-              - Staff/admin gudang: disembunyikan (API sudah kunci ke gudangnya sendiri)
-          */}
           {isAdmin && (
             <div className="space-y-1">
               <Label htmlFor="si-warehouse-id">Gudang</Label>
@@ -196,9 +213,7 @@ export function StockInReportSection() {
                 <SelectTrigger id="si-warehouse-id">
                   <SelectValue
                     placeholder={
-                      loadingWarehouses
-                        ? "Memuat gudang..."
-                        : "Semua gudang"
+                      loadingWarehouses ? "Memuat gudang..." : "Semua gudang"
                     }
                   />
                 </SelectTrigger>
@@ -232,57 +247,29 @@ export function StockInReportSection() {
           {error && <p className="text-sm text-destructive">{error}</p>}
         </div>
 
-        {/* Tabel */}
-        <div className="border rounded-md overflow-x-auto">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Tanggal</TableHead>
-                <TableHead>Warehouse</TableHead>
-                <TableHead>Reference</TableHead>
-                <TableHead>Catatan</TableHead>
-                <TableHead className="text-right">Total Item</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {rows.length === 0 && !loading && (
-                <TableRow>
-                  <TableCell
-                    colSpan={5}
-                    className="text-center text-sm text-muted-foreground"
-                  >
-                    Tidak ada data
-                  </TableCell>
-                </TableRow>
-              )}
-
-              {rows.map((row) => {
-                const totalQty = row.items?.reduce(
-                  (sum, item) => sum + item.qty,
-                  0
-                )
-
-                return (
-                  <TableRow key={row.id}>
-                    <TableCell>{formatDate(row.date_in)}</TableCell>
-                    <TableCell>{row.warehouse?.name ?? "-"}</TableCell>
-                    <TableCell>{row.reference}</TableCell>
-                    <TableCell>{row.note ?? "-"}</TableCell>
-                    <TableCell className="text-right">
-                      {formatNumber(totalQty ?? 0)}
-                    </TableCell>
-                  </TableRow>
-                )
-              })}
-            </TableBody>
-          </Table>
+        {/* Chart area */}
+        <div className="border rounded-md p-4 h-80">
+          {chartData.length === 0 ? (
+            <div className="h-full flex items-center justify-center text-sm text-muted-foreground">
+              Tidak ada data untuk ditampilkan di chart
+            </div>
+          ) : (
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={chartData} margin={{ top: 10, right: 20, left: 0, bottom: 20 }}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="label" angle={-45} textAnchor="end" height={60} />
+                <YAxis />
+                <Tooltip formatter={(val: any) => formatNumber(val)} />
+                <Bar dataKey="value" name="Total Unit" />
+              </BarChart>
+            </ResponsiveContainer>
+          )}
         </div>
 
         {meta && meta.last_page > 1 && (
           <div className="flex items-center justify-between pt-3">
             <p className="text-xs text-muted-foreground">
-              Halaman {meta.current_page} dari {meta.last_page} • Total{" "}
-              {meta.total} transaksi
+              Halaman {meta.current_page} dari {meta.last_page} • Total {meta.total} transaksi
             </p>
             <div className="flex gap-2">
               <Button
