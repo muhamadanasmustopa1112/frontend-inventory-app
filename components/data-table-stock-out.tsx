@@ -110,7 +110,7 @@ const productSchema = z.object({
   id: z.number(),
   sku: z.string(),
   name: z.string(),
-  default_sell_price: z.string(),
+  default_sell_price: z.string().nullable().optional(),
   category: z.string().nullable().optional(),
   description: z.string().nullable().optional(),
   is_active: z.number(),
