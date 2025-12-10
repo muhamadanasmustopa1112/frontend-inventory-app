@@ -197,7 +197,7 @@ export default function Page() {
               </div>
 
               <div className="space-y-1 md:col-span-1">
-                <Label>Invoice</Label>
+                <Label>No Surat Jalan</Label>
                 <Input
                   placeholder="INV-2024-0001"
                   value={invoice}
