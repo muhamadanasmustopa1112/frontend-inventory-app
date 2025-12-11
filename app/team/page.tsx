@@ -47,7 +47,6 @@ export default function TeamPage() {
         return
       }
 
-      // Laravel paginate: { data: [...], meta: {...} }
       const rows: UserRow[] = json?.data ?? json
       const metaData: PaginationMeta | null = json?.meta ?? null
 
@@ -65,14 +64,12 @@ export default function TeamPage() {
 
   useEffect(() => {
     fetchUsers(1)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   function handlePageChange(nextPage: number) {
     fetchUsers(nextPage)
   }
 
-  // state loading pertama kali → tampilkan skeleton seperti halaman lain
   if (loading && !users.length && !error) {
     return (
       <SidebarProvider
@@ -144,6 +141,7 @@ export default function TeamPage() {
                     meta={meta}
                     page={page}
                     onPageChange={handlePageChange}
+                    onRefresh={() => fetchUsers(page)}
                 />
                 </div>
             </div>

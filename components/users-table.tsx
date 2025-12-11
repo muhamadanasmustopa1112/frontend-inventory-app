@@ -1,5 +1,6 @@
 "use client"
 
+import { useState } from "react"
 import {
   Table,
   TableHeader,
@@ -9,6 +10,7 @@ import {
   TableCell,
 } from "@/components/ui/table"
 import { Button } from "@/components/ui/button"
+import EditUserModal from "./edit-user-model"
 
 export type UserRow = {
   id: number
@@ -36,6 +38,7 @@ type UsersTableProps = {
   meta: PaginationMeta | null
   page: number
   onPageChange: (page: number) => void
+  onRefresh?: () => void // callback untuk refresh list setelah edit sukses
 }
 
 export function UsersTable({
@@ -44,7 +47,10 @@ export function UsersTable({
   meta,
   page,
   onPageChange,
+  onRefresh,
 }: UsersTableProps) {
+  const [editing, setEditing] = useState<UserRow | null>(null)
+
   return (
     <div className="space-y-3">
       <div className="border rounded-md overflow-x-auto">
@@ -55,13 +61,14 @@ export function UsersTable({
               <TableHead>Email</TableHead>
               <TableHead>Role</TableHead>
               <TableHead>Gudang</TableHead>
+              <TableHead className="text-right">Aksi</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {data.length === 0 && !loading && (
               <TableRow>
                 <TableCell
-                  colSpan={4}
+                  colSpan={5}
                   className="text-center text-sm text-muted-foreground"
                 >
                   Tidak ada data
@@ -80,6 +87,17 @@ export function UsersTable({
                         user.warehouse.city ? ` — ${user.warehouse.city}` : ""
                       }`
                     : "-"}
+                </TableCell>
+                <TableCell className="text-right">
+                  <div className="flex justify-end gap-2">
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => setEditing(user)}
+                    >
+                      Edit
+                    </Button>
+                  </div>
                 </TableCell>
               </TableRow>
             ))}
@@ -113,6 +131,19 @@ export function UsersTable({
           </div>
         </div>
       )}
+
+      {editing && (
+        <EditUserModal
+          user={editing}
+          onClose={() => setEditing(null)}
+          onSaved={() => {
+            setEditing(null)
+            onRefresh?.()
+          }}
+        />
+      )}
     </div>
   )
 }
+
+export default UsersTable
