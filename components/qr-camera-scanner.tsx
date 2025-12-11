@@ -1,43 +1,46 @@
 "use client"
 
 import { Html5QrcodeScanner } from "html5-qrcode"
-import { useEffect } from "react"
+import { useEffect, useRef } from "react"
 
 type QrCameraScannerProps = {
   onDetected: (code: string) => void
+  stop?: boolean
 }
 
-export function QrCameraScanner({ onDetected }: QrCameraScannerProps) {
+export function QrCameraScanner({ onDetected, stop }: QrCameraScannerProps) {
+  const scannerRef = useRef<Html5QrcodeScanner | null>(null)
+
   useEffect(() => {
     const scanner = new Html5QrcodeScanner(
-      "qr-reader", 
+      "qr-reader",
       {
         fps: 10,
-        qrbox: 250, 
+        qrbox: 250,
+        videoConstraints: { facingMode: { ideal: "environment" } },
       },
       false
     )
+    scannerRef.current = scanner
 
     scanner.render(
       (decodedText) => {
-        // Kalau berhasil baca QR
         onDetected(decodedText)
-        // Kalau mau langsung stop setelah 1x scan:
         scanner.clear().catch(() => {})
       },
-      () => {
-        // error per frame, biasakan di-ignore aja
-      }
+      () => {}
     )
 
     return () => {
-      scanner.clear().catch(() => {})
+      scannerRef.current?.clear().catch(() => {})
     }
   }, [onDetected])
 
-  return (
-    <div className="flex justify-center">
-      <div id="qr-reader" className="w-[280px] max-w-full" />
-    </div>
-  )
+  useEffect(() => {
+    if (stop) {
+      scannerRef.current?.clear().catch(() => {})
+    }
+  }, [stop])
+
+  return <div id="qr-reader" className="w-[280px] max-w-full" />
 }

@@ -53,7 +53,7 @@ const data = {
       icon: IconUsersGroup,
     },
     {
-      title: "Team",
+      title: "Master User",
       url: "/team",
       icon: IconUsers,
     },

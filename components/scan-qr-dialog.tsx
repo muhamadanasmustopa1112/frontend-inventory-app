@@ -56,7 +56,7 @@ export function ScanQrDialog({ onScan, buttonLabel = "Scan QR" }: ScanQrDialogPr
         </DialogHeader>
 
         <div className="py-2 flex justify-center">
-          <QrCameraScanner onDetected={handleDetected} />
+          <QrCameraScanner onDetected={handleDetected} stop={!open} />
         </div>
 
         <DialogFooter>

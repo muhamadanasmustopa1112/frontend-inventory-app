@@ -221,7 +221,6 @@ export default function Page() {
                     <th className="px-3 py-2 text-left">Produk</th>
                     <th className="px-3 py-2 text-left">SKU</th>
                     <th className="px-3 py-2 text-left">Unit Code</th>
-                    <th className="px-3 py-2 text-right">Harga</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -231,13 +230,6 @@ export default function Page() {
                       <td className="px-3 py-2 font-mono text-xs">{u.sku}</td>
                       <td className="px-3 py-2 font-mono text-xs">
                         {u.unitCode}
-                      </td>
-                      <td className="px-3 py-2 text-right">
-                        {new Intl.NumberFormat("id-ID", {
-                          style: "currency",
-                          currency: "IDR",
-                          maximumFractionDigits: 0,
-                        }).format(u.price)}
                       </td>
                     </tr>
                   ))}
@@ -252,20 +244,6 @@ export default function Page() {
                     </tr>
                   )}
                 </tbody>
-                <tfoot>
-                  <tr className="border-t font-medium">
-                    <td className="px-3 py-2" colSpan={3}>
-                      Total
-                    </td>
-                    <td className="px-3 py-2 text-right">
-                      {new Intl.NumberFormat("id-ID", {
-                        style: "currency",
-                        currency: "IDR",
-                        maximumFractionDigits: 0,
-                      }).format(total)}
-                    </td>
-                  </tr>
-                </tfoot>
               </table>
             </div>
 
