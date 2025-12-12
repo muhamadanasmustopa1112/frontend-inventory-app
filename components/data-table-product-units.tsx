@@ -228,7 +228,7 @@ export function DataTableProductUnits({
       for (const row of filteredRows) {
         try {
           const res = await fetch(
-            `http://127.0.0.1:8000/qr/product-unit/${row.id}`,
+            `https://inventory-app.ptspsi.co.id/qr/product-unit/${row.id}`,
             { method: "GET" }
           )
 
