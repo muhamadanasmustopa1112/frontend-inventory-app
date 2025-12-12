@@ -9,7 +9,6 @@ import {
   getFilteredRowModel,
   getPaginationRowModel,
   getSortedRowModel,
-  Row,
   SortingState,
   VisibilityState,
   useReactTable,
@@ -42,6 +41,9 @@ import {
   TableRow,
 } from "@/components/ui/table"
 
+import JSZip from "jszip"
+import { saveAs } from "file-saver"
+
 export type ProductUnit = {
   id: number
   unit_code: string
@@ -67,6 +69,16 @@ export function DataTableProductUnits({
     setData(initialData)
   }, [initialData])
 
+  // select states
+  const [selectedProduct, setSelectedProduct] = React.useState<string | null>(
+    null
+  )
+  const [selectedWarehouse, setSelectedWarehouse] =
+    React.useState<string | null>(null)
+
+  const [isGeneratingZip, setIsGeneratingZip] = React.useState(false)
+
+  // table states
   const [rowSelection, setRowSelection] = React.useState({})
   const [columnVisibility, setColumnVisibility] =
     React.useState<VisibilityState>({})
@@ -156,72 +168,16 @@ export function DataTableProductUnits({
           return (
             <Badge
               variant={isInStock ? "default" : "outline"}
-              className={isInStock ? "bg-emerald-500 text-white" : "bg-red-500 text-white"}
+              className={
+                isInStock ? "bg-emerald-500 text-white" : "bg-red-500 text-white"
+              }
             >
               {status}
             </Badge>
           )
         },
       },
-      {
-        id: "actions",
-        header: "",
-        cell: ({ row }) => (
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={async () => {
-              try {
-                const res = await fetch(
-                  `https://inventory-app.ptspsi.co.id/qr/product-unit/${row.original.id}`,
-                  { method: "GET" }
-                )
-
-                if (!res.ok) {
-                  throw new Error(`Server responded ${res.status}`)
-                }
-
-                const blob = await res.blob()
-
-                const disposition = res.headers.get("content-disposition") || ""
-                let filenameMatch = disposition.match(/filename\*?=(?:UTF-8'')?"?([^";]+)/i)
-                let filename = filenameMatch ? decodeURIComponent(filenameMatch[1]) : ""
-
-                if (!filename) {
-                  const ct = (res.headers.get("content-type") || "").toLowerCase()
-                  const ext = ct.includes("png")
-                    ? "png"
-                    : ct.includes("svg")
-                    ? "svg"
-                    : ct.includes("pdf")
-                    ? "pdf"
-                    : ct.includes("jpeg") || ct.includes("jpg")
-                    ? "jpg"
-                    : "bin"
-                  filename = `${row.original.unit_code}.${ext}`
-                }
-
-                const url = URL.createObjectURL(blob)
-                const a = document.createElement("a")
-                a.href = url
-                a.download = filename
-                document.body.appendChild(a)
-                a.click()
-                a.remove()
-                URL.revokeObjectURL(url)
-              } catch (err) {
-                console.error("Download QR gagal:", err)
-                alert(
-                  "Gagal mengunduh QR."
-                )
-              }
-            }}
-          >
-            QR
-          </Button>
-        ),
-      }
-
+      // actions column intentionally removed (per request)
     ],
     []
   )
@@ -249,6 +205,91 @@ export function DataTableProductUnits({
     getSortedRowModel: getSortedRowModel(),
   })
 
+  // sync selects -> table filters
+  React.useEffect(() => {
+    // set empty string to clear filter when null/empty
+    table.getColumn("product")?.setFilterValue(selectedProduct ?? "")
+    table.getColumn("warehouse")?.setFilterValue(selectedWarehouse ?? "")
+    // reset to first page when filter changes
+    table.setPageIndex(0)
+  }, [selectedProduct, selectedWarehouse, table])
+
+  async function handleGenerateZip(filteredRows: ProductUnit[]) {
+    if (filteredRows.length === 0) {
+      alert("Tidak ada data untuk digenerate.")
+      return
+    }
+
+    setIsGeneratingZip(true)
+    const zip = new JSZip()
+    let failed = 0
+
+    try {
+      for (const row of filteredRows) {
+        try {
+          const res = await fetch(
+            `http://127.0.0.1:8000/qr/product-unit/${row.id}`,
+            { method: "GET" }
+          )
+
+          if (!res.ok) {
+            throw new Error(`Server responded ${res.status}`)
+          }
+
+          const blob = await res.blob()
+
+          // try filename from content-disposition
+          const disposition = res.headers.get("content-disposition") || ""
+          let filenameMatch = disposition.match(
+            /filename\*?=(?:UTF-8'')?"?([^";]+)/i
+          )
+          let filename = filenameMatch ? decodeURIComponent(filenameMatch[1]) : ""
+
+          if (!filename) {
+            const ct = (res.headers.get("content-type") || "").toLowerCase()
+            const ext = ct.includes("png")
+              ? "png"
+              : ct.includes("svg")
+              ? "svg"
+              : ct.includes("pdf")
+              ? "pdf"
+              : ct.includes("jpeg") || ct.includes("jpg")
+              ? "jpg"
+              : "bin"
+            filename = `${row.unit_code}.${ext}`
+          }
+
+          // use arrayBuffer for binary safety
+          const arrayBuffer = await blob.arrayBuffer()
+          zip.file(filename, arrayBuffer)
+        } catch (err) {
+          console.error(`Gagal download QR untuk id=${row.id}:`, err)
+          failed += 1
+          // continue
+        }
+      }
+
+      const zipBlob = await zip.generateAsync({ type: "blob" })
+      saveAs(zipBlob, "qr-product-units.zip")
+
+      if (failed > 0) {
+        alert(
+          `Selesai, namun ${failed} file gagal diunduh dan tidak dimasukkan ke ZIP.`
+        )
+      } else {
+        alert("Selesai: ZIP berhasil dibuat dan diunduh.")
+      }
+    } catch (err) {
+      console.error("Gagal membuat ZIP:", err)
+      alert("Terjadi error saat membuat ZIP.")
+    } finally {
+      setIsGeneratingZip(false)
+    }
+  }
+
+  // sentinel value used for "all" options — must NOT be empty string
+  const ALL_SENTINEL = "__all__"
+
   return (
     <div className="w-full flex flex-col gap-4 p-6">
       {/* Search */}
@@ -269,6 +310,71 @@ export function DataTableProductUnits({
             }
           />
         </div>
+      </div>
+
+      {/* Selects + Generate ZIP */}
+      <div className="flex gap-2 mb-4 items-center">
+        <Select
+          value={selectedProduct ?? ALL_SENTINEL}
+          onValueChange={(value) =>
+            setSelectedProduct(value === ALL_SENTINEL ? null : value)
+          }
+        >
+          <SelectTrigger>
+            <SelectValue placeholder="Pilih produk" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value={ALL_SENTINEL}>Semua produk</SelectItem>
+            {Array.from(
+              new Set(data.map((item) => item.product?.name).filter(Boolean))
+            ).map((product) => (
+              // ensure product name exists before rendering item
+              <SelectItem key={product} value={product!}>
+                {product}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+
+        <Select
+          value={selectedWarehouse ?? ALL_SENTINEL}
+          onValueChange={(value) =>
+            setSelectedWarehouse(value === ALL_SENTINEL ? null : value)
+          }
+        >
+          <SelectTrigger>
+            <SelectValue placeholder="Pilih gudang" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value={ALL_SENTINEL}>Semua gudang</SelectItem>
+            {Array.from(
+              new Set(data.map((item) => item.warehouse?.name).filter(Boolean))
+            ).map((warehouse) => (
+              <SelectItem key={warehouse} value={warehouse!}>
+                {warehouse}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+
+        <Button
+          onClick={() => {
+            // ambil rows yg sudah terfilter di table (menggabungkan semua filter)
+            const filteredRows = table.getFilteredRowModel().rows.map(
+              (r) => r.original
+            )
+
+            if (filteredRows.length === 0) {
+              alert("Tidak ada data untuk digenerate.")
+              return
+            }
+
+            handleGenerateZip(filteredRows)
+          }}
+          disabled={isGeneratingZip}
+        >
+          {isGeneratingZip ? "Generating ZIP..." : "Generate ZIP"}
+        </Button>
       </div>
 
       {/* Table */}
@@ -299,20 +405,14 @@ export function DataTableProductUnits({
                 >
                   {row.getVisibleCells().map((cell) => (
                     <TableCell key={cell.id}>
-                      {flexRender(
-                        cell.column.columnDef.cell,
-                        cell.getContext()
-                      )}
+                      {flexRender(cell.column.columnDef.cell, cell.getContext())}
                     </TableCell>
                   ))}
                 </TableRow>
               ))
             ) : (
               <TableRow>
-                <TableCell
-                  colSpan={columns.length}
-                  className="h-24 text-center"
-                >
+                <TableCell colSpan={columns.length} className="h-24 text-center">
                   Tidak ada data.
                 </TableCell>
               </TableRow>
@@ -339,9 +439,7 @@ export function DataTableProductUnits({
               }}
             >
               <SelectTrigger size="sm" className="w-20" id="rows-per-page">
-                <SelectValue
-                  placeholder={table.getState().pagination.pageSize}
-                />
+                <SelectValue placeholder={table.getState().pagination.pageSize} />
               </SelectTrigger>
               <SelectContent side="top">
                 {[10, 20, 30, 40, 50].map((pageSize) => (
@@ -352,10 +450,12 @@ export function DataTableProductUnits({
               </SelectContent>
             </Select>
           </div>
+
           <div className="flex w-fit items-center justify-center text-sm font-medium">
             Page {table.getState().pagination.pageIndex + 1} dari{" "}
             {table.getPageCount() || 1}
           </div>
+
           <div className="ml-auto flex items-center gap-2 lg:ml-0">
             <Button
               variant="outline"
@@ -390,9 +490,7 @@ export function DataTableProductUnits({
               variant="outline"
               className="hidden size-8 lg:flex"
               size="icon"
-              onClick={() =>
-                table.setPageIndex(table.getPageCount() - 1)
-              }
+              onClick={() => table.setPageIndex(table.getPageCount() - 1)}
               disabled={!table.getCanNextPage()}
             >
               <span className="sr-only">Go to last page</span>

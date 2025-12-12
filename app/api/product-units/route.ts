@@ -64,12 +64,12 @@ export async function GET(req: NextRequest) {
     const searchParams = url.searchParams
 
     // default pagination kalau frontend tidak kirim
-    if (!searchParams.get("page")) {
-      searchParams.set("page", "1")
-    }
-    if (!searchParams.get("per_page")) {
-      searchParams.set("per_page", "100")
-    }
+    // if (!searchParams.get("page")) {
+    //   searchParams.set("page", "1")
+    // }
+    // if (!searchParams.get("per_page")) {
+    //   searchParams.set("per_page", "100")
+    // }
 
     // kalau user punya warehouse_id → paksa filter ke gudangnya sendiri
     if (user?.warehouse_id !== null && user?.warehouse_id !== undefined) {
