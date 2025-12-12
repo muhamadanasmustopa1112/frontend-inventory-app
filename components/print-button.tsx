@@ -35,9 +35,27 @@ export function PrintButton({
 }) {
   const [loading, setLoading] = React.useState(false)
 
+  async function fetchCurrentUser() {
+    try {
+      const res = await fetch("/api/users/me", {
+        method: "GET",
+        cache: "no-store",
+      })
+
+      if (!res.ok) return null
+
+      return await res.json()
+    } catch (err) {
+      console.error("fetchCurrentUser error:", err)
+      return null
+    }
+  }
+  
   async function handlePrint() {
     setLoading(true)
     try {
+      const user = await fetchCurrentUser()
+      const userName = user?.name ?? "-"
       const doc = new jsPDF({ unit: "pt", format: "a4" })
       const marginLeft = 40
       const pageWidth = doc.internal.pageSize.getWidth()
@@ -175,22 +193,12 @@ export function PrintButton({
         const lineHeight = 100
 
         doc.text("Dibuat Oleh,", marginLeft, signatureY - 10)
-        doc.line(
-             marginLeft,
-            signatureY + lineHeight,         
-            marginLeft + lineLength,
-            signatureY + lineHeight
-        );
+        doc.text(userName, marginLeft, signatureY + lineHeight)
 
         const penerimaX = marginLeft + lineLength + gap;
-        const dateY = signatureY - 50; 
         const diterimaY = signatureY;  
         const lineY = diterimaY + lineHeight; 
 
-        const spaces = " ".repeat(2);
-        const dots = ".".repeat(30);
-
-        doc.text(`${dots},${spaces}${dots}`, penerimaX, dateY);
         doc.text("Diterima Oleh,", penerimaX, diterimaY);
 
         doc.line(

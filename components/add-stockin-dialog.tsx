@@ -49,6 +49,10 @@ export function AddStockInDialog({ onSuccess }: AddStockInDialogProps) {
     { product_id: "", qty: "", sell_price: "", buy_price: "" },
   ])
 
+  // NEW: states for date display and ISO value to send to backend
+  const [dateInDisplay, setDateInDisplay] = useState<string>("")
+  const [dateInIso, setDateInIso] = useState<string>("")
+
   async function fetchWarehouses() {
     try {
       const res = await fetch("/api/warehouses", { cache: "no-store" })
@@ -80,6 +84,22 @@ export function AddStockInDialog({ onSuccess }: AddStockInDialogProps) {
       setWarehouseId(String(user.warehouse_id))
     }
   }, [user])
+
+  // When dialog opens, set current timestamp (display + ISO)
+  useEffect(() => {
+    if (!open) return
+
+    const now = new Date()
+    // ISO string for backend (UTC)
+    const iso = now.toISOString()
+    // local format for input type="datetime-local" (yyyy-MM-ddTHH:mm)
+    const localForInput = new Date(now.getTime() - now.getTimezoneOffset() * 60000)
+      .toISOString()
+      .slice(0, 16)
+
+    setDateInIso(iso)
+    setDateInDisplay(localForInput)
+  }, [open])
 
   function addItemRow() {
     setItems((prev) => [
@@ -118,6 +138,7 @@ export function AddStockInDialog({ onSuccess }: AddStockInDialogProps) {
       return
     }
 
+    // date_in now comes from hidden ISO input
     const date_in = formData.get("date_in") as string | null
     const reference = formData.get("reference") as string | null
     const note = formData.get("note") as string | null
@@ -148,7 +169,7 @@ export function AddStockInDialog({ onSuccess }: AddStockInDialogProps) {
 
     const body = {
       warehouse_id,
-      date_in,
+      date_in, // ISO timestamp
       reference: reference || null,
       note: note || null,
       items: cleanedItems,
@@ -177,6 +198,7 @@ export function AddStockInDialog({ onSuccess }: AddStockInDialogProps) {
         id: loadingToastId,
       })
 
+      // reset form fields (non-controlled inputs) and stateful parts
       form.reset()
       setItems([{ product_id: "", qty: "", sell_price: "", buy_price: "" }])
 
@@ -185,6 +207,7 @@ export function AddStockInDialog({ onSuccess }: AddStockInDialogProps) {
         setWarehouseId("")
       }
 
+      // update date state next time dialog opens (we keep current ISO/display until closed)
       setOpen(false)
       onSuccess?.()
     } catch (error: any) {
@@ -248,7 +271,6 @@ export function AddStockInDialog({ onSuccess }: AddStockInDialogProps) {
                       {warehouses.map((wh) => (
                         <SelectItem key={wh.id} value={String(wh.id)}>
                           <div className="flex flex-col w-full">
-                            {/* Jika field sku tidak ada, bagian ini aman tetap ditampilkan */}
                             {wh.sku && (
                               <span className="text-[11px] font-mono text-muted-foreground">
                                 {wh.sku}
@@ -265,10 +287,22 @@ export function AddStockInDialog({ onSuccess }: AddStockInDialogProps) {
                 )}
               </div>
 
-              {/* Tanggal masuk */}
+              {/* Tanggal masuk (visible readonly + hidden ISO input untuk backend) */}
               <div className="space-y-2 min-w-0">
                 <Label htmlFor="date_in">Tanggal Masuk</Label>
-                <Input id="date_in" name="date_in" type="date" required className="w-full" />
+
+                {/* Visible, not-editable datetime-local (user cannot change) */}
+                <Input
+                  id="date_in_display"
+                  type="datetime-local"
+                  value={dateInDisplay}
+                  readOnly
+                  className="w-full bg-gray-100 cursor-not-allowed"
+                  onChange={() => {}}
+                />
+
+                {/* Hidden input yang dikirim ke backend — gunakan ISO lengkap */}
+                <input type="hidden" id="date_in" name="date_in" value={dateInIso} readOnly />
               </div>
 
               {/* Surat Jalan */}
@@ -391,7 +425,6 @@ export function AddStockInDialog({ onSuccess }: AddStockInDialogProps) {
           </DialogFooter>
         </form>
       </DialogContent>
-
     </Dialog>
   )
 }
