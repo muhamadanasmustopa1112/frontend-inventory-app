@@ -21,6 +21,10 @@ export default function Page() {
   const [stockOuts, setStockOuts] = useState<StockOut[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [dateFrom, setDateFrom] = useState("")
+  const [dateTo, setDateTo] = useState("")
+
+  /* ================= FETCH TABLE ================= */
 
   async function fetchStockOut() {
     try {
@@ -35,7 +39,6 @@ export default function Page() {
       if (!res.ok) {
         const err = await res.json().catch(() => null)
         setError(err?.message || "Gagal mengambil data stock out")
-        setLoading(false)
         return
       }
 
@@ -50,8 +53,8 @@ export default function Page() {
       } else {
         setStockOuts(parsed.data)
       }
-    } catch (error) {
-      console.error(error)
+    } catch (err) {
+      console.error(err)
       setError("Terjadi kesalahan koneksi")
     } finally {
       setLoading(false)
@@ -61,6 +64,8 @@ export default function Page() {
   useEffect(() => {
     fetchStockOut()
   }, [])
+
+  /* ================= SCAN QR ================= */
 
   async function handleScanCode(code: string) {
     try {
@@ -82,16 +87,17 @@ export default function Page() {
       toast.success(
         unit
           ? `Unit tersedia: ${unit.product?.name ?? "-"} @ ${unit.warehouse?.name ?? "-"}`
-          : "Unit is available"
+          : "Unit tersedia"
       )
-
     } catch (err) {
       console.error(err)
       toast.error("Gagal menghubungi server")
     }
   }
 
-    function toCsvValue(value: unknown) {
+  /* ================= CSV HELPER ================= */
+
+  function toCsvValue(value: unknown) {
     if (value === null || value === undefined) return ""
     const str = String(value)
     if (str.includes(",") || str.includes('"') || str.includes("\n")) {
@@ -100,50 +106,74 @@ export default function Page() {
     return str
   }
 
-  function handleExportExcel() {
-    if (!stockOuts.length) {
-      toast.error("Tidak ada data untuk diexport")
-      return
+
+  async function handleExportExcel() {
+    try {
+      if (!dateFrom || !dateTo) {
+        toast.error("Tanggal awal dan akhir wajib diisi")
+        return
+      }
+
+      toast.loading("Menyiapkan file export...", { id: "export" })
+
+      const params = new URLSearchParams({
+        date_from: dateFrom,
+        date_to: dateTo,
+      })
+
+      const res = await fetch(
+        `/api/reports/stock-out/export-units?${params.toString()}`,
+        {
+          method: "GET",
+          credentials: "include",
+        }
+      )
+
+      if (!res.ok) {
+        const err = await res.json().catch(() => null)
+        throw new Error(err?.message || "Gagal mengambil data laporan")
+      }
+
+      const json = await res.json()
+
+      if (!json?.data || json.data.length === 0) {
+        toast.error("Data laporan kosong", { id: "export" })
+        return
+      }
+
+      const data = json.data as Record<string, any>[]
+      const header = Object.keys(data[0])
+
+      const rows = data.map((row) =>
+        header.map((key) => toCsvValue(row[key]))
+      )
+
+      const csv = [
+        header.join(","),
+        ...rows.map((r) => r.join(",")),
+      ].join("\n")
+
+      const blob = new Blob([csv], {
+        type: "text/csv;charset=utf-8;",
+      })
+
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement("a")
+
+      a.href = url
+      a.download = `laporan-stock-out-${dateFrom}-to-${dateTo}.csv`
+      a.click()
+
+      URL.revokeObjectURL(url)
+      toast.success("Export berhasil", { id: "export" })
+    } catch (error: any) {
+      console.error(error)
+      toast.error(error.message || "Export gagal", { id: "export" })
     }
-
-    const header = [
-      "ID",
-      "Tanggal",
-      "Warehouse",
-      "Buyer",
-      "Surat Jalan",
-      "Catatan",
-    ]
-
-    const rowsCsv = stockOuts.map((row) => [
-      toCsvValue(row.id),
-      toCsvValue(row.date_out),
-      toCsvValue(row.warehouse?.name ?? ""),
-      toCsvValue(row.buyer?.name ?? ""),
-      toCsvValue(row.reference ?? ""),
-      toCsvValue(row.note ?? ""),
-    ])
-
-    const csvLines = [
-      header.join(","),
-      ...rowsCsv.map((r) => r.join(",")),
-    ]
-
-    const csv = csvLines.join("\n")
-
-    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" })
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement("a")
-    const today = new Date().toISOString().slice(0, 10)
-
-    a.href = url
-    a.download = `stock-out-${today}.csv`
-    document.body.appendChild(a)
-    a.click()
-    a.remove()
-    URL.revokeObjectURL(url)
   }
 
+
+  /* ================= UI ================= */
 
   if (loading)
     return (
@@ -191,6 +221,10 @@ export default function Page() {
                 onRefresh={fetchStockOut}
                 onScanCode={handleScanCode}
                 onExportExcel={handleExportExcel}
+                dateFrom={dateFrom}
+                dateTo={dateTo}
+                setDateFrom={setDateFrom}
+                setDateTo={setDateTo}
               />
             </div>
           </div>

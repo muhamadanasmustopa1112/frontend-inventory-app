@@ -329,11 +329,19 @@ function DraggableRow({ row }: { row: Row<StockOut> }) {
 export function DataTableStockOut({
   data: initialData,
   onExportExcel,
+  dateFrom,
+  dateTo,
+  setDateFrom,
+  setDateTo,
 }: {
   data: StockOut[]
   onRefresh?: () => void
   onScanCode?: (code: string) => void
   onExportExcel?: () => void
+  dateFrom: string
+  dateTo: string
+  setDateFrom: (v: string) => void
+  setDateTo: (v: string) => void
 
 }) {
   const [data, setData] = React.useState<StockOut[]>(initialData)
@@ -572,22 +580,40 @@ export function DataTableStockOut({
 
   return (
     <div className="w-full flex flex-col gap-4 p-6">
-      <div className="flex items-center gap-2 justify-between">
-        <div className="flex items-center gap-2 flex-1">
+
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <Label htmlFor="search-products" className="sr-only">
             Cari transaksi / produk
           </Label>
           <Input
             id="search-products"
             placeholder="Cari nama produk..."
-            className="h-8 w-full max-w-xs"
+            className="h-8 w-[220px]"
             value={(table.getColumn("products")?.getFilterValue() as string) ?? ""}
             onChange={(event) =>
               table.getColumn("products")?.setFilterValue(event.target.value)
             }
           />
+
+          {/* Date From */}
+          <input
+            type="date"
+            value={dateFrom}
+            onChange={(e) => setDateFrom(e.target.value)}
+            className="h-8 rounded-md border px-2 text-sm"
+          />
+
+          {/* Date To */}
+          <input
+            type="date"
+            value={dateTo}
+            onChange={(e) => setDateTo(e.target.value)}
+            className="h-8 rounded-md border px-2 text-sm"
+          />
         </div>
 
+        {/* RIGHT */}
         <div className="flex items-center gap-2">
           <Link href="/stock-out/pos">
             <Button variant="default">
@@ -596,10 +622,7 @@ export function DataTableStockOut({
           </Link>
 
           {onExportExcel && (
-            <Button
-              variant="outline"
-              onClick={onExportExcel}
-            >
+            <Button variant="outline" onClick={onExportExcel}>
               Export Excel
             </Button>
           )}
