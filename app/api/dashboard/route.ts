@@ -22,6 +22,15 @@ type StockOutResponse = {
     total_units_out_page?: string
     total_transactions?: number
   }
+  data?: Array<{
+    items?: Array<{
+      qty: number
+      product?: {
+        id: number
+        name: string
+      }
+    }>
+  }>
 }
 
 type StockBalanceResponse = {
@@ -43,24 +52,25 @@ export async function GET(req: NextRequest) {
     const cookie = req.headers.get("cookie") || ""
     const base = new URL(req.url).origin
 
-    const [salesRes, stockInRes, stockOutRes, stockBalanceRes] = await Promise.all([
-      fetch(`${base}/api/reports/sales`, {
-        headers: { cookie },
-        cache: "no-store",
-      }),
-      fetch(`${base}/api/reports/stock-in`, {
-        headers: { cookie },
-        cache: "no-store",
-      }),
-      fetch(`${base}/api/reports/stock-out`, {
-        headers: { cookie },
-        cache: "no-store",
-      }),
-      fetch(`${base}/api/reports/stock-balance`, {
-        headers: { cookie },
-        cache: "no-store",
-      }),
-    ])
+    const [salesRes, stockInRes, stockOutRes, stockBalanceRes] =
+      await Promise.all([
+        fetch(`${base}/api/reports/sales`, {
+          headers: { cookie },
+          cache: "no-store",
+        }),
+        fetch(`${base}/api/reports/stock-in`, {
+          headers: { cookie },
+          cache: "no-store",
+        }),
+        fetch(`${base}/api/reports/stock-out`, {
+          headers: { cookie },
+          cache: "no-store",
+        }),
+        fetch(`${base}/api/reports/stock-balance`, {
+          headers: { cookie },
+          cache: "no-store",
+        }),
+      ])
 
     const salesJson = (await salesRes.json().catch(() => null)) as SalesResponse
     const stockInJson = (await stockInRes.json().catch(() => null)) as StockInResponse
@@ -99,10 +109,12 @@ export async function GET(req: NextRequest) {
 
     for (const row of stockBalanceJson?.data ?? []) {
       const cat = row.category || "Lainnya"
-      stockByCategoryMap[cat] = (stockByCategoryMap[cat] || 0) + (row.qty ?? 0)
+      stockByCategoryMap[cat] =
+        (stockByCategoryMap[cat] || 0) + (row.qty ?? 0)
 
       const wh = row.warehouse_name || "Tanpa Warehouse"
-      stockByWarehouseMap[wh] = (stockByWarehouseMap[wh] || 0) + (row.qty ?? 0)
+      stockByWarehouseMap[wh] =
+        (stockByWarehouseMap[wh] || 0) + (row.qty ?? 0)
 
       const key = `${row.product_id}`
       if (!productQtyMap[key]) {
@@ -116,8 +128,16 @@ export async function GET(req: NextRequest) {
       }
     }
 
-    const stockByCategory = Object.entries(stockByCategoryMap).map(
-      ([category, qty]) => ({ category, qty })
+    const stockByProductMap: Record<string, number> = {}
+
+    for (const row of stockBalanceJson?.data ?? []) {
+      const productName = row.product_name || "Unknown Product"
+      stockByProductMap[productName] =
+        (stockByProductMap[productName] || 0) + (row.qty ?? 0)
+    }
+
+    const stockByProduct = Object.entries(stockByProductMap).map(
+      ([product_name, qty]) => ({ product_name, qty })
     )
 
     const stockByWarehouse = Object.entries(stockByWarehouseMap).map(
@@ -125,6 +145,34 @@ export async function GET(req: NextRequest) {
     )
 
     const topProducts = Object.values(productQtyMap)
+      .sort((a, b) => b.qty - a.qty)
+      .slice(0, 5)
+
+    // ---- Stock out by product (FIXED) ----
+    const stockOutByProductMap: Record<
+      string,
+      { product_name: string; qty: number }
+    > = {}
+
+    for (const trx of stockOutJson?.data ?? []) {
+      for (const item of trx.items ?? []) {
+        const productName = item.product?.name || "Unknown Product"
+        const qty = Number(item.qty ?? 0)
+
+        if (!stockOutByProductMap[productName]) {
+          stockOutByProductMap[productName] = {
+            product_name: productName,
+            qty,
+          }
+        } else {
+          stockOutByProductMap[productName].qty += qty
+        }
+      }
+    }
+
+    const stockOutByProduct = Object.values(stockOutByProductMap)
+
+    const topStockOutProducts = [...stockOutByProduct]
       .sort((a, b) => b.qty - a.qty)
       .slice(0, 5)
 
@@ -137,9 +185,11 @@ export async function GET(req: NextRequest) {
           totalStockQty,
         },
         revenueTrend,
-        stockByCategory,
+        stockByProduct,
+        stockOutByProduct,
         stockByWarehouse,
         topProducts,
+        topStockOutProducts,
       },
       { status: 200 }
     )

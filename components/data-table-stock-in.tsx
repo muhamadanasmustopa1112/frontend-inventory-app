@@ -301,9 +301,20 @@ function DraggableRow({ row }: { row: Row<StockIn> }) {
 export function DataTableStockIn({
   data: initialData,
   onRefresh,
+  onExportExcel,
+  dateFrom,
+  dateTo,
+  setDateFrom,
+  setDateTo,
+  
 }: {
   data: StockIn[],
   onRefresh?: () => void
+   onExportExcel?: () => void
+  dateFrom: string
+  dateTo: string
+  setDateFrom: (v: string) => void
+  setDateTo: (v: string) => void
 }) {
   const [data, setData] = React.useState<StockIn[]>(initialData)
 
@@ -527,8 +538,26 @@ export function DataTableStockIn({
               table.getColumn("products")?.setFilterValue(event.target.value)
             }
           />
+          <input
+            type="date"
+            value={dateFrom}
+            onChange={(e) => setDateFrom(e.target.value)}
+            className="h-8 rounded-md border px-2 text-sm"
+          />
+
+          <input
+            type="date"
+            value={dateTo}
+            onChange={(e) => setDateTo(e.target.value)}
+            className="h-8 rounded-md border px-2 text-sm"
+          />
         </div>
        <AddStockInDialog onSuccess={onRefresh} />
+       {onExportExcel && (
+          <Button variant="outline" onClick={onExportExcel}>
+            Export Excel
+          </Button>
+        )}
       </div>
 
       {/* Tabel + Drag & Drop */}

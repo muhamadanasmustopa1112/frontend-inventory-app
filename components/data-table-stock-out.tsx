@@ -57,12 +57,6 @@ import {
   DrawerTitle,
   DrawerTrigger,
 } from "@/components/ui/drawer"
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import {
@@ -596,7 +590,6 @@ export function DataTableStockOut({
             }
           />
 
-          {/* Date From */}
           <input
             type="date"
             value={dateFrom}
@@ -604,7 +597,6 @@ export function DataTableStockOut({
             className="h-8 rounded-md border px-2 text-sm"
           />
 
-          {/* Date To */}
           <input
             type="date"
             value={dateTo}

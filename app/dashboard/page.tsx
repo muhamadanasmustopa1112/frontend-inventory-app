@@ -12,9 +12,10 @@ import {
 } from "@/components/ui/sidebar"
 
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card"
-import { StockByCategoryChart } from "./_components/stock-by-category-chart"
 import { StockByWarehouseChart } from "./_components/stock-by-warehouse-chart"
 import { TopProductsTable } from "./_components/top-products-table"
+import { StockByProductChart } from "./_components/stock-by-product-chart"
+import { StockOutByProductChart } from "./_components/stock-out-product-chart"
 
 type DashboardData = {
   summary: {
@@ -22,7 +23,8 @@ type DashboardData = {
     totalUnitsOut: number
     totalStockQty: number
   }
-  stockByCategory: { category: string; qty: number }[]
+  stockByProduct: { product_name: string; qty: number }[]
+  stockOutByProduct: { product_name: string; qty: number }[]
   stockByWarehouse: { warehouse: string; qty: number }[]
   topProducts: { product_id: number; product_name: string; qty: number }[]
 }
@@ -49,7 +51,8 @@ export default function DashboardAnalyticsPage() {
             totalUnitsOut: Number(json?.summary?.totalUnitsOut ?? 0),
             totalStockQty: Number(json?.summary?.totalStockQty ?? 0),
           },
-          stockByCategory: Array.isArray(json?.stockByCategory) ? json.stockByCategory : [],
+          stockByProduct: Array.isArray(json?.stockByProduct) ? json.stockByProduct : [],
+          stockOutByProduct: Array.isArray(json?.stockOutByProduct) ? json.stockOutByProduct : [],
           stockByWarehouse: Array.isArray(json?.stockByWarehouse) ? json.stockByWarehouse : [],
           topProducts: Array.isArray(json?.topProducts) ? json.topProducts : [],
         }
@@ -160,33 +163,38 @@ export default function DashboardAnalyticsPage() {
                         </CardContent>
                       </Card>
                     </div>
-
-                    {/* Stock charts */}
                     <div className="grid gap-4 md:grid-cols-2">
                       <Card>
                         <CardHeader>
                           <CardTitle className="text-sm font-medium">
-                            Distribusi Stock per Kategori
+                            Distribusi Stock per Nama Produk
                           </CardTitle>
                         </CardHeader>
                         <CardContent>
-                          <StockByCategoryChart data={data.stockByCategory} />
+                          <StockByProductChart data={data.stockByProduct} />
                         </CardContent>
                       </Card>
-
                       <Card>
                         <CardHeader>
                           <CardTitle className="text-sm font-medium">
-                            Stock per Warehouse
+                            Produk Terjual / Stock Out
                           </CardTitle>
                         </CardHeader>
                         <CardContent>
-                          <StockByWarehouseChart data={data.stockByWarehouse} />
+                          <StockOutByProductChart data={data.stockOutByProduct} />
                         </CardContent>
                       </Card>
                     </div>
-
-                    {/* Top products */}
+                    <Card>
+                      <CardHeader>
+                        <CardTitle className="text-sm font-medium">
+                          Stock per Warehouse
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <StockByWarehouseChart data={data.stockByWarehouse} />
+                      </CardContent>
+                    </Card>
                     <Card>
                       <CardHeader>
                         <CardTitle className="text-sm font-medium">

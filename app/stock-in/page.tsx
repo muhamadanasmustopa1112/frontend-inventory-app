@@ -8,12 +8,15 @@ import { AppSidebar } from "@/components/app-sidebar"
 import { SiteHeader } from "@/components/site-header"
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar"
 import { DataTableStockIn, stockInSchema, type StockIn } from "@/components/data-table-stock-in"
-import z from "zod"
+import { toast } from "sonner"
+
 
 export default function Page() {
   const [stockIns, setStockIns] = useState<StockIn[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [dateFrom, setDateFrom] = useState("")
+  const [dateTo, setDateTo] = useState("")
 
   async function fetchStockIn() {
     try {
@@ -39,13 +42,86 @@ export default function Page() {
     }
   }
 
+  function toCsvValue(value: unknown) {
+    if (value === null || value === undefined) return ""
+    const str = String(value)
+    if (str.includes(",") || str.includes('"') || str.includes("\n")) {
+      return `"${str.replace(/"/g, '""')}"`
+    }
+    return str
+  }
+
+  async function handleExportExcel() {
+    try {
+      if (!dateFrom || !dateTo) {
+        toast.error("Tanggal awal dan akhir wajib diisi")
+        return
+      }
+
+      toast.loading("Menyiapkan file export...", { id: "export" })
+
+      const params = new URLSearchParams({
+        date_from: dateFrom,
+        date_to: dateTo,
+      })
+
+      const res = await fetch(
+        `/api/reports/stock-in/export-units?${params.toString()}`,
+        {
+          method: "GET",
+          credentials: "include",
+        }
+      )
+
+      if (!res.ok) {
+        const err = await res.json().catch(() => null)
+        throw new Error(err?.message || "Gagal mengambil data laporan")
+      }
+
+      const json = await res.json()
+
+      if (!json?.data || json.data.length === 0) {
+        toast.error("Data laporan kosong", { id: "export" })
+        return
+      }
+
+      const data = json.data as Record<string, any>[]
+      const header = Object.keys(data[0])
+
+      const rows = data.map((row) =>
+        header.map((key) => toCsvValue(row[key]))
+      )
+
+      const csv = [
+        header.join(","),
+        ...rows.map((r) => r.join(",")),
+      ].join("\n")
+
+      const blob = new Blob([csv], {
+        type: "text/csv;charset=utf-8;",
+      })
+
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement("a")
+
+      a.href = url
+      a.download = `laporan-stock-in-${dateFrom}-to-${dateTo}.csv`
+      a.click()
+
+      URL.revokeObjectURL(url)
+      toast.success("Export berhasil", { id: "export" })
+    } catch (error: any) {
+      console.error(error)
+      toast.error(error.message || "Export gagal", { id: "export" })
+    }
+  }
+
+
   useEffect(() => {
     fetchStockIn() 
   }, [])
 
-  useEffect(() => {
-    fetchStockIn()
-  }, [])
+
 
   if (loading)
     return (
@@ -83,7 +159,15 @@ export default function Page() {
         <div className="flex flex-1 flex-col">
           <div className="@container/main flex flex-1 flex-col gap-2">
             <div className="flex flex-col gap-4 py-4 md:gap-6 md:py-6">
-              <DataTableStockIn data={stockIns} onRefresh={fetchStockIn} />
+              <DataTableStockIn 
+                data={stockIns} 
+                onRefresh={fetchStockIn}
+                onExportExcel={handleExportExcel}
+                dateFrom={dateFrom}
+                dateTo={dateTo}
+                setDateFrom={setDateFrom}
+                setDateTo={setDateTo} 
+              />
             </div>
           </div>
         </div>
