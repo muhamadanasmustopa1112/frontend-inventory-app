@@ -35,16 +35,12 @@ export function StockOutByProductChart({ data }: Props) {
             dataKey="qty"
             nameKey="product_name"
             outerRadius={90}
-            label={({ product_name, qty }) =>
-              `${product_name} (${qty.toLocaleString("id-ID")})`
-            }
           >
             {filtered.map((_, i) => (
               <Cell key={i} fill={COLORS[i % COLORS.length]} />
             ))}
           </Pie>
           <Tooltip formatter={(v: number) => v.toLocaleString("id-ID")} />
-          <Legend />
         </PieChart>
       </ResponsiveContainer>
     </div>

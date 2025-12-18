@@ -6,10 +6,9 @@ import {
   Cell,
   ResponsiveContainer,
   Tooltip,
-  Legend,
 } from "recharts"
 
-const COLORS = ["#3b82f6", "#22c55e", "#f59e0b", "#ef4444", "#a855f7"]
+const COLORS = ["#3b82f6", "#22c55e", "#f59e0b", "#ef4444", "#a855f7", "#06b6d4", "#ec4899", "#6366f1"]
 
 type Props = {
   data: { product_name: string; qty: number }[]
@@ -35,9 +34,6 @@ export function StockByProductChart({ data }: Props) {
             cx="50%"
             cy="50%"
             outerRadius={80}
-            label={(entry) =>
-              `${entry.product_name} (${entry.qty.toLocaleString("id-ID")})`
-            }
           >
             {data.map((_, index) => (
               <Cell key={index} fill={COLORS[index % COLORS.length]} />
@@ -49,8 +45,6 @@ export function StockByProductChart({ data }: Props) {
               Number(value).toLocaleString("id-ID")
             }
           />
-
-          <Legend />
         </PieChart>
       </ResponsiveContainer>
     </div>
