@@ -48,6 +48,15 @@ export type ProductUnit = {
   id: number
   unit_code: string
   status: string
+  stock_in_id?: number | null
+  stock_in_item?: {
+    stock_in_id: number
+    stock_in?: {
+      id: number
+      reference?: string | null
+      date_in?: string | null
+    }
+  } | null
   product?: {
     name: string
     sku: string
@@ -67,21 +76,24 @@ export function DataTableProductUnits({
 
   React.useEffect(() => {
     setData(initialData)
+     console.log("INITIAL DATA (props):", initialData)
   }, [initialData])
 
-  // select states
   const [selectedProduct, setSelectedProduct] = React.useState<string | null>(
     null
   )
   const [selectedWarehouse, setSelectedWarehouse] =
     React.useState<string | null>(null)
+  const [selectedStockInId, setSelectedStockInId] =
+  React.useState<string | null>(null)
 
   const [isGeneratingZip, setIsGeneratingZip] = React.useState(false)
 
-  // table states
   const [rowSelection, setRowSelection] = React.useState({})
   const [columnVisibility, setColumnVisibility] =
-    React.useState<VisibilityState>({})
+    React.useState<VisibilityState>({
+      stock_in_id: false,
+    })
   const [columnFilters, setColumnFilters] =
     React.useState<ColumnFiltersState>([])
   const [sorting, setSorting] = React.useState<SortingState>([])
@@ -177,7 +189,10 @@ export function DataTableProductUnits({
           )
         },
       },
-      // actions column intentionally removed (per request)
+      {
+        accessorKey: "stock_in_id",
+        header: "Stock In ID",
+      },
     ],
     []
   )
@@ -205,14 +220,12 @@ export function DataTableProductUnits({
     getSortedRowModel: getSortedRowModel(),
   })
 
-  // sync selects -> table filters
   React.useEffect(() => {
-    // set empty string to clear filter when null/empty
     table.getColumn("product")?.setFilterValue(selectedProduct ?? "")
+    table.getColumn("stock_in_id")?.setFilterValue(selectedStockInId ?? "")
     table.getColumn("warehouse")?.setFilterValue(selectedWarehouse ?? "")
-    // reset to first page when filter changes
     table.setPageIndex(0)
-  }, [selectedProduct, selectedWarehouse, table])
+  }, [selectedProduct, selectedWarehouse,selectedStockInId, table])
 
   async function handleGenerateZip(filteredRows: ProductUnit[]) {
     if (filteredRows.length === 0) {
@@ -238,7 +251,6 @@ export function DataTableProductUnits({
 
           const blob = await res.blob()
 
-          // try filename from content-disposition
           const disposition = res.headers.get("content-disposition") || ""
           let filenameMatch = disposition.match(
             /filename\*?=(?:UTF-8'')?"?([^";]+)/i
@@ -287,12 +299,10 @@ export function DataTableProductUnits({
     }
   }
 
-  // sentinel value used for "all" options — must NOT be empty string
   const ALL_SENTINEL = "__all__"
 
   return (
     <div className="w-full flex flex-col gap-4 p-6">
-      {/* Search */}
       <div className="flex items-center gap-2 justify-between">
         <div className="flex items-center gap-2 flex-1">
           <Label htmlFor="search-units" className="sr-only">
@@ -311,8 +321,6 @@ export function DataTableProductUnits({
           />
         </div>
       </div>
-
-      {/* Selects + Generate ZIP */}
       <div className="flex gap-2 mb-4 items-center">
         <Select
           value={selectedProduct ?? ALL_SENTINEL}
@@ -328,14 +336,12 @@ export function DataTableProductUnits({
             {Array.from(
               new Set(data.map((item) => item.product?.name).filter(Boolean))
             ).map((product) => (
-              // ensure product name exists before rendering item
               <SelectItem key={product} value={product!}>
                 {product}
               </SelectItem>
             ))}
           </SelectContent>
         </Select>
-
         <Select
           value={selectedWarehouse ?? ALL_SENTINEL}
           onValueChange={(value) =>
@@ -356,14 +362,49 @@ export function DataTableProductUnits({
             ))}
           </SelectContent>
         </Select>
-
+        <Select
+          value={selectedStockInId ?? ALL_SENTINEL}
+          onValueChange={(value) =>
+            setSelectedStockInId(value === ALL_SENTINEL ? null : value)
+          }
+        >
+          <SelectTrigger>
+            <SelectValue placeholder="Pilih Stock In" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value={ALL_SENTINEL}>Semua Stock In</SelectItem>
+            {Array.from(
+              new Map(
+                data
+                  .filter((item) => item.stock_in_id)
+                  .map((item) => [
+                    item.stock_in_id!,
+                    {
+                      id: item.stock_in_id!,
+                      reference: item.stock_in_item?.stock_in?.reference,
+                      date: item.stock_in_item?.stock_in?.date_in,
+                    },
+                  ])
+              ).values()
+            ).map((stockIn) => (
+              <SelectItem key={stockIn.id} value={stockIn.id.toString()}>
+                {stockIn.reference
+                  ? stockIn.reference
+                  : `Stock In #${stockIn.id}`}
+                {stockIn.date && (
+                  <span className="ml-2 text-xs text-muted-foreground">
+                    ({new Date(stockIn.date).toLocaleDateString()})
+                  </span>
+                )}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
         <Button
           onClick={() => {
-            // ambil rows yg sudah terfilter di table (menggabungkan semua filter)
             const filteredRows = table.getFilteredRowModel().rows.map(
               (r) => r.original
             )
-
             if (filteredRows.length === 0) {
               alert("Tidak ada data untuk digenerate.")
               return
@@ -377,7 +418,6 @@ export function DataTableProductUnits({
         </Button>
       </div>
 
-      {/* Table */}
       <div className="overflow-hidden rounded-lg border">
         <Table>
           <TableHeader className="bg-muted sticky top-0 z-10">
@@ -421,7 +461,6 @@ export function DataTableProductUnits({
         </Table>
       </div>
 
-      {/* Pagination */}
       <div className="flex items-center justify-between px-1">
         <div className="text-muted-foreground hidden flex-1 text-sm lg:flex">
           {table.getFilteredSelectedRowModel().rows.length} dari{" "}
