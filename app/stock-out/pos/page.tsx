@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect  } from "react"
 import type React from "react"
 import { Loader2 } from "lucide-react"
 import { toast } from "sonner"
@@ -14,6 +14,8 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 
+const CART_STORAGE_KEY = "stockout_pos_cart"
+
 type CartUnit = {
   unitId: number
   unitCode: string
@@ -24,7 +26,10 @@ type CartUnit = {
   warehouseId: number
 }
 
+
 export default function Page() {
+  const [manualCode, setManualCode] = useState("")
+  const [addingManual, setAddingManual] = useState(false)
   const [cartUnits, setCartUnits] = useState<CartUnit[]>([])
   const [buyerName, setBuyerName] = useState("")
   const [note, setNote] = useState("")
@@ -33,7 +38,42 @@ export default function Page() {
   const [buyerAddress, setBuyerAddress] = useState("")
   const [invoice, setInvoice] = useState("")
 
-  async function handleScan(code: string) {
+  useEffect(() => {
+
+    if (typeof window === "undefined") return
+
+    const savedCart = localStorage.getItem(CART_STORAGE_KEY)
+
+    if (savedCart) {
+      try {
+        const parsed: CartUnit[] = JSON.parse(savedCart)
+        setCartUnits(parsed)
+      } catch (err) {
+        console.error("Gagal parse cart storage", err)
+        localStorage.removeItem(CART_STORAGE_KEY)
+      }
+    }
+  }, [])
+
+  useEffect(() => {
+
+    if (typeof window === "undefined") return
+    
+    localStorage.setItem(
+      CART_STORAGE_KEY,
+      JSON.stringify(cartUnits)
+    )
+
+  }, [cartUnits])
+
+
+
+  async function addUnitByCode(code: string) {
+    if (!code.trim()) {
+      toast.error("Unit code tidak boleh kosong")
+      return
+    }
+
     try {
       const res = await fetch("/api/scan-qr", {
         method: "POST",
@@ -44,7 +84,7 @@ export default function Page() {
       const json = await res.json().catch(() => null)
 
       if (!res.ok) {
-        toast.error(json?.message || "QR tidak valid / unit tidak ditemukan")
+        toast.error(json?.message || "Unit tidak ditemukan")
         return
       }
 
@@ -57,8 +97,6 @@ export default function Page() {
           return prev
         }
 
-        const price = Number(product.default_sell_price ?? 0)
-
         return [
           ...prev,
           {
@@ -67,7 +105,7 @@ export default function Page() {
             productId: product.id,
             sku: product.sku,
             name: product.name,
-            price,
+            price: Number(product.default_sell_price ?? 0),
             warehouseId: unit.warehouse_id,
           },
         ]
@@ -78,6 +116,22 @@ export default function Page() {
       console.error(err)
       toast.error("Gagal menghubungi server")
     }
+  }
+
+  async function handleScan(code: string) {
+    await addUnitByCode(code)
+  }
+
+  async function handleAddManual() {
+    if (!manualCode.trim()) {
+      toast.error("Masukkan unit code terlebih dahulu")
+      return
+    }
+
+    setAddingManual(true)
+    await addUnitByCode(manualCode.trim())
+    setManualCode("")
+    setAddingManual(false)
   }
 
   async function handleSubmit() {
@@ -128,9 +182,10 @@ export default function Page() {
         return
       }
 
-      console.log(invoice)
       toast.success("Transaksi berhasil dibuat")
       setCartUnits([])
+      localStorage.removeItem(CART_STORAGE_KEY)
+
       setBuyerName("")
       setBuyerPhone("")
       setBuyerAddress("")
@@ -165,9 +220,36 @@ export default function Page() {
               <h1 className="text-lg font-semibold">
                 Stock Out POS (Scan QR per Unit)
               </h1>
-              <ScanQrDialog buttonLabel="Scan QR Unit" onScan={handleScan} />
-            </div>
+              <div className="flex items-end gap-2">
+                <div className="space-y-1">
+                  <Label>Input Unit Code</Label>
+                  <Input
+                    placeholder="UNIT-ABC-001"
+                    value={manualCode}
+                    onChange={(e) => setManualCode(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") handleAddManual()
+                    }}
+                  />
+                </div>
+                <Button
+                  variant="secondary"
+                  onClick={handleAddManual}
+                  disabled={addingManual}
+                >
+                  {addingManual ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Menambahkan
+                    </>
+                  ) : (
+                    "Tambah"
+                  )}
+                </Button>
 
+                <ScanQrDialog buttonLabel="Scan QR Unit" onScan={handleScan} />
+              </div>
+            </div>
             <div className="grid gap-4 md:grid-cols-4">
               <div className="space-y-1">
                 <Label>Nama Buyer</Label>
