@@ -192,6 +192,10 @@ export function DataTableProductUnits({
       {
         accessorKey: "stock_in_id",
         header: "Stock In ID",
+        filterFn: (row, columnId, filterValue) => {
+          if (!filterValue) return true
+          return row.getValue<number | null>(columnId) === Number(filterValue)
+        },
       },
     ],
     []
