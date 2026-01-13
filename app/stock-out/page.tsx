@@ -109,25 +109,22 @@ export default function Page() {
 
   async function handleExportExcel() {
     try {
-
-
       toast.loading("Menyiapkan file export...", { id: "export" })
 
-      const params = new URLSearchParams({
-        date_from: dateFrom,
-        date_to: dateTo,
-      })
+      const params = new URLSearchParams()
 
       if (dateFrom) params.append("date_from", dateFrom)
       if (dateTo) params.append("date_to", dateTo)
 
-      const res = await fetch(
-        `/api/reports/stock-out/export-units?${params.toString()}`,
-        {
-          method: "GET",
-          credentials: "include",
-        }
-      )
+      const query = params.toString()
+      const url = query
+        ? `/api/reports/stock-out/export-units?${query}`
+        : `/api/reports/stock-out/export-units`
+
+      const res = await fetch(url, {
+        method: "GET",
+        credentials: "include",
+      })
 
       if (!res.ok) {
         const err = await res.json().catch(() => null)
@@ -157,20 +154,18 @@ export default function Page() {
         type: "text/csv;charset=utf-8;",
       })
 
-      const url = URL.createObjectURL(blob)
       const a = document.createElement("a")
-
-      a.href = url
-      a.download = `laporan-stock-out-${dateFrom}-to-${dateTo}.csv`
+      a.href = URL.createObjectURL(blob)
+      a.download = "laporan-stock-out.csv"
       a.click()
 
-      URL.revokeObjectURL(url)
       toast.success("Export berhasil", { id: "export" })
     } catch (error: any) {
       console.error(error)
       toast.error(error.message || "Export gagal", { id: "export" })
     }
   }
+
 
 
   /* ================= UI ================= */
