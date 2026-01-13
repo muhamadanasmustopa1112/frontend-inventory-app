@@ -137,7 +137,7 @@ export default function Page() {
         toast.error("Data laporan kosong", { id: "export" })
         return
       }
-
+      console.log(json.data)
       const data = json.data as Record<string, any>[]
       const header = Object.keys(data[0])
 
