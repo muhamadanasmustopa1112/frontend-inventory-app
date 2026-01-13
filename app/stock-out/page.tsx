@@ -109,10 +109,7 @@ export default function Page() {
 
   async function handleExportExcel() {
     try {
-      if (!dateFrom || !dateTo) {
-        toast.error("Tanggal awal dan akhir wajib diisi")
-        return
-      }
+
 
       toast.loading("Menyiapkan file export...", { id: "export" })
 
@@ -120,6 +117,9 @@ export default function Page() {
         date_from: dateFrom,
         date_to: dateTo,
       })
+
+      if (dateFrom) params.append("date_from", dateFrom)
+      if (dateTo) params.append("date_to", dateTo)
 
       const res = await fetch(
         `/api/reports/stock-out/export-units?${params.toString()}`,
